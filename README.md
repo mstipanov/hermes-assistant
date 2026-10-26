@@ -3,107 +3,110 @@
 [![Latest release](https://img.shields.io/github/v/release/mstipanov/hermes-assistant?sort=semver&label=release)](https://github.com/mstipanov/hermes-assistant/releases/latest)
 [![License: MIT](https://img.shields.io/github/license/mstipanov/hermes-assistant)](LICENSE)
 
-Android glasovni asistent koji kao backend koristi Hermes agenta na vlastitom serveru. Chat sa streaming odgovorima, alati i odobrenja, hrvatski glas, budilica
-"Hey Hermes" i izvršavanje akcija na telefonu — sve preko autentificirane veze prema tvom serveru.
+An Android voice assistant backed by a Hermes agent running on your own server. Streaming chat
+replies, tools and approvals, Croatian voice, the "Hey Hermes" wake word, and device actions — all
+over an authenticated connection to your server.
 
-Osobni sideload projekt: aplikacija namjerno traži široke dozvole (kontakti, pozivi, instalacija
-ažuriranja), pa nije namijenjena Google Playu.
+Personal sideload project: the app intentionally requests broad permissions (contacts, calls,
+update installation), so it is not intended for Google Play.
 
-## Što radi
+## Features
 
-- **Razgovor** — streaming odgovori, tool aktivnost, odobrenja i clarify pitanja preko Hermes
-  dashboard WebSocket gatewaya.
-- **Glas** — wake word "Hey Hermes" radi lokalno (sherpa-onnx KWS model u appu), STT ide preko
-  Google recognizera ili Hermes servera, a odgovor čita Android TTS ili Hermes neuralni glas.
-- **Audio-only ekran** — veliki orb i zadnji odgovor, bez tipkovnice; praktično za auto.
-- **Akcije na telefonu** — otvaranje aplikacija, glazba, alarm, poziv, SMS i URL-ovi. Osjetljive
-  akcije traže potvrdu u appu (može se isključiti u Postavkama).
-- **Datoteke** — Hermes može poslati PDF, sliku ili bilo koju datoteku; sprema se u
-  `Download/Hermes` i otvara dijeljenjem.
-- **Ažuriranja** — provjera verzije, preuzimanje i instalacija iz appa, uz provjeru SHA-256.
-- **Zadani asistent** — može preuzeti Android rolu digitalnog asistenta i Quick Settings pločicu.
+- **Chat** — streaming replies, tool activity, approvals, and clarify questions over the Hermes
+  dashboard WebSocket gateway.
+- **Voice** — the "Hey Hermes" wake word runs locally (sherpa-onnx KWS model bundled in the app),
+  STT uses Google's recognizer or the Hermes server, and replies are spoken by Android TTS or the
+  Hermes neural voice.
+- **Audio-only screen** — a large orb and the latest answer, no keyboard; practical in the car.
+- **Device actions** — launching apps, music, alarms, calls, SMS, and URLs. Sensitive actions
+  require confirmation in the app (can be disabled in Settings).
+- **Files** — Hermes can send a PDF, image, or any other file; it is saved to `Download/Hermes` and
+  opened or shared from the chat.
+- **Updates** — version check, download, and in-app installation with SHA-256 verification.
+- **Default assistant** — can take over the Android digital assistant role and the Quick Settings
+  tile.
 
-## Preduvjeti
+## Requirements
 
-- Hermes server s uključenim dashboard API-jem (REST + `/api/ws` gateway).
-- Android 8.0 (API 26) ili noviji, `arm64-v8a`.
-- Za javni pristup: Cloudflare Tunnel i po želji Cloudflare Access service token.
+- A Hermes server with the dashboard API enabled (REST + the `/api/ws` gateway).
+- Android 8.0 (API 26) or newer, `arm64-v8a`.
+- For public access: a Cloudflare Tunnel and optionally a Cloudflare Access service token.
 
-## Instalacija
+## Installation
 
-Preuzmi najnoviji `Hermes-<verzija>.apk` s [Releases](https://github.com/mstipanov/hermes-assistant/releases)
-i instaliraj ga (dopusti instalaciju iz nepoznatog izvora).
+Download the latest `Hermes-<version>.apk` from
+[Releases](https://github.com/mstipanov/hermes-assistant/releases) and install it (allow
+installation from unknown sources).
 
-> **Važno:** verzije do 0.43 distribuirane su debug-potpisanim APK-om. Prva release-potpisana
-> verzija (0.44+) ima drugi potpis, pa je prije instalacije potrebno **deinstalirati staru
-> aplikaciju**. Time se brišu lokalne postavke i spremljene tajne, ali ne i povijest razgovora na
-> serveru.
+> **Important:** versions up to 0.43 were distributed as a debug-signed APK. The first
+> release-signed version (0.44+) uses a different signature, so **uninstall the old app first**.
+> This erases local settings and stored secrets, but not the conversation history on the server.
 
-## Konfiguracija
+## Configuration
 
-1. Otvori app i upiši adresu servera (npr. `https://hermes.sting.hr`).
-2. Upiši API token ili korisničko ime i lozinku dashboarda.
-3. Ako je ispred servera Cloudflare Access, upiši i service token (Client ID + Client Secret).
+1. Open the app and enter the server URL (e.g. `https://hermes.sting.hr`).
+2. Enter an API token, or the dashboard username and password.
+3. If the server is behind Cloudflare Access, enter the service token (Client ID + Client Secret).
 
-API token se generira na serveru:
+Generate an API token on the server:
 
 ```bash
 python3 tools/make_api_key.py --days 90
 ```
 
-Skripta čita `dashboard.basic_auth` iz `~/.hermes/config.yaml`, piše token u
-`~/.hermes-assistant/api.key` (mode 600) i ne ispisuje ga. Token vrijedi dok ne istekne ili dok se
-ne rotira `dashboard.basic_auth.secret`.
+The script reads `dashboard.basic_auth` from `~/.hermes/config.yaml`, writes the token to
+`~/.hermes-assistant/api.key` (mode 600), and never prints it. The token stays valid until it
+expires or until `dashboard.basic_auth.secret` is rotated.
 
-## Sigurnost i privatnost
+## Security and privacy
 
-- Lozinka, API token i Cloudflare Access tajna spremaju se AES-256-GCM ključem iz Android
-  Keystorea; nikad se ne zapisuju u log ni u dijagnostiku (`set`/`missing`).
-- Aplikacija šalje vjerodajnice isključivo svom serveru. Datoteke se preuzimaju samo s iste
-  domene, čak i ako server vrati apsolutni URL.
-- `device.action` (poziv, SMS, alarm, URL, pokretanje aplikacije) zadano traži potvrdu korisnika.
-- Vanjske aplikacije ne mogu otvoriti mikrofon preko exported `MainActivity`; slušanje pokreću
-  samo komponente unutar appa (pločica, asistentska tipka) ili korisnikov `listenOnOpen`.
-- Ažuriranja se primaju samo s `hermes-assistant.sting.hr` i provjerava se SHA-256 ako ga server
-  pošalje.
-- `android:allowBackup="false"`, nema WebViewa ni dinamičkog izvršavanja koda.
-- Preuzete datoteke ograničene su na 200 MB; imena se čiste od path traversal pokušaja.
+- The password, API token, and Cloudflare Access secret are stored with an AES-256-GCM key from the
+  Android Keystore; they are never written to logs or diagnostics (`set`/`missing` only).
+- The app sends credentials only to its own server. Files are downloaded only from the same origin,
+  even if the server returns an absolute URL.
+- `device.action` (call, SMS, alarm, URL, launching an app) requires user confirmation by default.
+- Third-party apps cannot open the microphone through the exported `MainActivity`; listening can
+  only be started by in-app components (the tile, the assistant key) or the user's `listenOnOpen`
+  setting.
+- Updates are accepted only from `hermes-assistant.sting.hr`, and SHA-256 is verified when the
+  server provides it.
+- `android:allowBackup="false"`, no WebView, and no dynamic code execution.
+- Downloaded files are capped at 200 MB; filenames are sanitized against path traversal.
 
-Aplikacija komunicira s tvojim Hermes serverom. Što server radi s porukama, govorom i datotekama
-ovisi o tvojoj Hermes konfiguraciji — ne šalje se ništa trećim stranama osim ako uključiš Google
-STT.
+The app talks to your Hermes server. What the server does with messages, speech, and files depends
+on your Hermes configuration — nothing is sent to third parties unless you enable Google STT.
 
-## Dozvole
+## Permissions
 
-| Dozvola | Zašto |
+| Permission | Why |
 |---|---|
-| `INTERNET`, `ACCESS_NETWORK_STATE` | veza sa serverom |
-| `RECORD_AUDIO`, `FOREGROUND_SERVICE_MICROPHONE` | glasovni unos i wake word |
-| `POST_NOTIFICATIONS` | obavijest o primljenoj datoteci i radu servisa |
-| `READ_CONTACTS` | pronalaženje kontakta po imenu (opcionalno) |
-| `CALL_PHONE` | direktan poziv bez dialera (opcionalno) |
-| `SET_ALARM` | postavljanje alarma |
-| `REQUEST_INSTALL_PACKAGES` | samoažuriranje APK-a |
-| `QUERY_ALL_PACKAGES` | popis i pokretanje instaliranih aplikacija |
+| `INTERNET`, `ACCESS_NETWORK_STATE` | connection to the server |
+| `RECORD_AUDIO`, `FOREGROUND_SERVICE_MICROPHONE` | voice input and wake word |
+| `POST_NOTIFICATIONS` | file received and foreground service notifications |
+| `READ_CONTACTS` | finding a contact by name (optional) |
+| `CALL_PHONE` | direct calls without the dialer (optional) |
+| `SET_ALARM` | setting alarms |
+| `REQUEST_INSTALL_PACKAGES` | in-app APK updates |
+| `QUERY_ALL_PACKAGES` | listing and launching installed apps |
 
-## Gradnja
+## Build
 
-Potrebno: JDK 21, Android SDK 36, Gradle wrapper (9.7.1).
+Requires JDK 21, Android SDK 36, and the Gradle wrapper (9.7.1).
 
 ```bash
 export JAVA_HOME=/opt/homebrew/opt/openjdk@21/libexec/openjdk.jdk/Contents/Home
 ./gradlew :app:assembleDebug
 ```
 
-APK izlazi u `app/build/outputs/apk/debug/Hermes-<verzija>.apk`.
+The APK is written to `app/build/outputs/apk/debug/Hermes-<version>.apk`.
 
-### Release potpisivanje
+### Release signing
 
-`app/build.gradle.kts` čita `keystore.properties` iz korijena repozitorija (datoteka je
-gitignorirana). Primjer:
+`app/build.gradle.kts` reads `keystore.properties` from the repository root (the file is
+gitignored). Example:
 
 ```properties
-storeFile=/Users/ti/.hermes-assistant/hermes-release.jks
+storeFile=/Users/you/.hermes-assistant/hermes-release.jks
 storePassword=…
 keyAlias=hermes
 keyPassword=…
@@ -113,39 +116,40 @@ keyPassword=…
 ./gradlew :app:assembleRelease
 ```
 
-Bez `keystore.properties` release build ostaje nepotpisan. Keystore i lozinke nikada ne idu u git.
+Without `keystore.properties` the release build stays unsigned. The keystore and passwords never go
+into git.
 
-### Objava
+### Publishing
 
-Verzija se mijenja u `app/build.gradle.kts` (`versionCode` / `versionName`), doda se unos u
-`CHANGELOG.md`, izgradi release APK i priloži ga GitHub releaseu:
+The version is changed in `app/build.gradle.kts` (`versionCode` / `versionName`), an entry is added
+to `CHANGELOG.md`, the release APK is built, and it is attached to a GitHub release:
 
 ```bash
 gh release create 0.44 app/build/outputs/apk/release/Hermes-0.44.apk \
   --title "Hermes 0.44" --notes-file /tmp/hermes-0.44-notes.md
 ```
 
-`<notes>` je odjeljak iz `CHANGELOG.md` s priloženim support footerom iz `SUPPORT.md`, tako da svaki
-release nosi linkove za podršku.
+`<notes>` is the `CHANGELOG.md` section followed by the support footer from `SUPPORT.md`, so every
+release carries the support links.
 
-## Struktura
+## Structure
 
-- `app/src/main/java/hr/sting/hermes/data` — REST/WebSocket klijent, postavke, sigurno spremište
-- `app/src/main/java/hr/sting/hermes/voice` — wake word, STT, TTS, foreground servis
-- `app/src/main/java/hr/sting/hermes/device` — akcije na telefonu i primanje datoteka
-- `app/src/main/java/hr/sting/hermes/ui` — Compose ekrani
-- `app/src/main/assets/kws` — lokalni KWS model i popis ključnih riječi
-- `tools/` — pomoćne skripte (mint API tokena, spike testovi)
+- `app/src/main/java/hr/sting/hermes/data` — REST/WebSocket client, settings, secure storage
+- `app/src/main/java/hr/sting/hermes/voice` — wake word, STT, TTS, foreground service
+- `app/src/main/java/hr/sting/hermes/device` — device actions and file receiving
+- `app/src/main/java/hr/sting/hermes/ui` — Compose screens
+- `app/src/main/assets/kws` — local KWS model and keyword list
+- `tools/` — helper scripts (API token minting, spike tests)
 
-## Podrži projekt
+## Support the project
 
-Ako ti je Hermes Assistant koristan, možeš podržati njegov razvoj:
+If Hermes Assistant is useful to you, you can support its development:
 
 - ☕ [Buy Me a Coffee](https://buymeacoffee.com/mstipanov)
 - 💳 [PayPal](https://paypal.me/mstipanov)
 
-Detalji su u [SUPPORT.md](SUPPORT.md).
+Details are in [SUPPORT.md](SUPPORT.md).
 
-## Licenca
+## License
 
-MIT — vidi [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE).
