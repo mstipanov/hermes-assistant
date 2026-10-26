@@ -125,6 +125,9 @@ gh release create 0.44 app/build/outputs/apk/release/Hermes-0.44.apk \
   --title "Hermes 0.44" --notes-file /tmp/hermes-0.44-notes.md
 ```
 
+`<notes>` je odjeljak iz `CHANGELOG.md` s priloženim support footerom iz `SUPPORT.md`, tako da svaki
+release nosi linkove za podršku.
+
 ## Struktura
 
 - `app/src/main/java/hr/sting/hermes/data` — REST/WebSocket klijent, postavke, sigurno spremište
@@ -133,6 +136,15 @@ gh release create 0.44 app/build/outputs/apk/release/Hermes-0.44.apk \
 - `app/src/main/java/hr/sting/hermes/ui` — Compose ekrani
 - `app/src/main/assets/kws` — lokalni KWS model i popis ključnih riječi
 - `tools/` — pomoćne skripte (mint API tokena, spike testovi)
+
+## Podrži projekt
+
+Ako ti je Hermes Assistant koristan, možeš podržati njegov razvoj:
+
+- ☕ [Buy Me a Coffee](https://buymeacoffee.com/mstipanov)
+- 💳 [PayPal](https://paypal.me/mstipanov)
+
+Detalji su u [SUPPORT.md](SUPPORT.md).
 
 ## Licenca
 
