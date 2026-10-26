@@ -1,10 +1,12 @@
 package hr.sting.hermes.voice
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.media.AudioFormat
 import android.media.AudioRecord
 import android.media.AudioRecord.STATE_INITIALIZED
 import android.media.MediaRecorder
+import hr.sting.hermes.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,7 +22,7 @@ import kotlin.math.sqrt
  * 16 kHz mono PCM16 recorder with a simple energy VAD so a tap on the mic
  * ends the utterance after a natural pause instead of requiring a second tap.
  */
-class AudioRecorder {
+class AudioRecorder(private val context: Context) {
     private val _amplitude = MutableStateFlow(0f)
     val amplitude: StateFlow<Float> = _amplitude.asStateFlow()
 
@@ -40,7 +42,7 @@ class AudioRecorder {
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT,
         )
-        if (minBuffer <= 0) error("Mikrofon nije dostupan")
+        if (minBuffer <= 0) error(context.getString(R.string.mic_unavailable))
         val bufferSize = maxOf(minBuffer * 4, 16_384)
         val record = AudioRecord(
             MediaRecorder.AudioSource.MIC,
@@ -51,7 +53,7 @@ class AudioRecorder {
         )
         if (record.state != STATE_INITIALIZED) {
             record.release()
-            error("Mikrofon se nije mogao otvoriti")
+            error(context.getString(R.string.mic_cannot_open))
         }
         activeRecord = record
 
@@ -120,7 +122,7 @@ class AudioRecorder {
             AudioFormat.CHANNEL_IN_MONO,
             AudioFormat.ENCODING_PCM_16BIT,
         )
-        if (minBuffer <= 0) error("Mikrofon nije dostupan")
+        if (minBuffer <= 0) error(context.getString(R.string.mic_unavailable))
         val record = AudioRecord(
             MediaRecorder.AudioSource.MIC,
             sampleRate,
@@ -130,7 +132,7 @@ class AudioRecorder {
         )
         if (record.state != STATE_INITIALIZED) {
             record.release()
-            error("Mikrofon se nije mogao otvoriti")
+            error(context.getString(R.string.mic_cannot_open))
         }
         activeRecord = record
         val output = ByteArrayOutputStream()

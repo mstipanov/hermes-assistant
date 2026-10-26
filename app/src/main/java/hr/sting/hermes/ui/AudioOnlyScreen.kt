@@ -46,10 +46,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import hr.sting.hermes.R
 import hr.sting.hermes.data.HermesUiState
 import hr.sting.hermes.voice.SpeechText
 import hr.sting.hermes.data.LinkState
@@ -89,12 +91,19 @@ fun AudioOnlyScreen(
         it.role == MessageRole.ASSISTANT && it.text.isNotBlank()
     }
     val (status, hint) = when {
-        state.link !is LinkState.Ready -> "Nisam povezan" to "Provjeri vezu u Postavkama"
-        voiceState == "listening" -> "Slušam…" to "Dodirni orb da prekineš"
-        voiceState == "transcribing" -> "Prepoznajem govor…" to ""
-        voiceState == "thinking" || state.running -> "Hermes razmišlja…" to ""
-        voiceState == "speaking" -> "Hermes govori…" to "Dodirni orb za prekid"
-        else -> "Spreman" to "Dodirni orb i reci što trebaš"
+        state.link !is LinkState.Ready -> stringResource(R.string.status_not_connected) to
+            stringResource(R.string.hint_check_settings)
+
+        voiceState == "listening" -> stringResource(R.string.status_listening) to
+            stringResource(R.string.hint_tap_to_stop)
+
+        voiceState == "transcribing" -> stringResource(R.string.status_transcribing) to ""
+        voiceState == "thinking" || state.running -> stringResource(R.string.status_thinking) to ""
+        voiceState == "speaking" -> stringResource(R.string.status_speaking) to
+            stringResource(R.string.hint_tap_to_interrupt)
+
+        else -> stringResource(R.string.status_ready) to
+            stringResource(R.string.hint_tap_and_speak)
     }
 
     Box(
@@ -140,9 +149,9 @@ fun AudioOnlyScreen(
                         Text("Hermes", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         Text(
                             when (state.link) {
-                                is LinkState.Ready -> "Povezan"
-                                is LinkState.Connecting -> "Spajam se…"
-                                else -> "Offline"
+                                is LinkState.Ready -> stringResource(R.string.status_connected)
+                                is LinkState.Connecting -> stringResource(R.string.status_connecting)
+                                else -> stringResource(R.string.status_offline)
                             },
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -150,10 +159,10 @@ fun AudioOnlyScreen(
                     }
                 }
                 IconButton(onClick = onOpenChat) {
-                    Icon(Icons.Filled.Chat, contentDescription = "Razgovor")
+                    Icon(Icons.Filled.Chat, contentDescription = stringResource(R.string.cd_chat))
                 }
                 IconButton(onClick = onOpenSettings) {
-                    Icon(Icons.Filled.Settings, contentDescription = "Postavke")
+                    Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.cd_settings))
                 }
             }
 
@@ -226,7 +235,7 @@ fun AudioOnlyScreen(
                         modifier = Modifier.size(18.dp),
                     )
                     Spacer(Modifier.size(6.dp))
-                    Text("Ponovi odgovor")
+                    Text(stringResource(R.string.replay_answer))
                 }
             }
             if (state.partialTranscript.isNotBlank() &&
@@ -256,7 +265,13 @@ fun AudioOnlyScreen(
                         modifier = Modifier.size(20.dp),
                     )
                     Spacer(Modifier.size(8.dp))
-                    Text(if (listening) "Zaustavi slušanje" else "Prekini")
+                    Text(
+                        if (listening) {
+                            stringResource(R.string.stop_listening)
+                        } else {
+                            stringResource(R.string.interrupt)
+                        },
+                    )
                 }
             }
 
@@ -270,7 +285,11 @@ fun AudioOnlyScreen(
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
                         Text(
-                            if (state.lastTurnFromVoice) "Glasovni odgovor" else "Tekstualni odgovor",
+                            if (state.lastTurnFromVoice) {
+                                stringResource(R.string.voice_reply)
+                            } else {
+                                stringResource(R.string.text_reply)
+                            },
                             style = MaterialTheme.typography.labelSmall,
                             color = if (state.lastTurnFromVoice) {
                                 MaterialTheme.colorScheme.primary
@@ -299,15 +318,15 @@ fun AudioOnlyScreen(
                             IconButton(onClick = { onSpeakLast(reply.text) }) {
                                 Icon(
                                     Icons.Filled.VolumeUp,
-                                    contentDescription = "Ponovi odgovor",
+                                    contentDescription = stringResource(R.string.replay_answer),
                                     tint = MaterialTheme.colorScheme.primary,
                                 )
                             }
                             TextButton(onClick = { onSpeakLast(reply.text) }) {
-                                Text("Ponovi")
+                                Text(stringResource(R.string.replay))
                             }
                             TextButton(onClick = onOpenChat) {
-                                Text("Otvori razgovor")
+                                Text(stringResource(R.string.open_chat))
                             }
                         }
                     }
@@ -340,11 +359,11 @@ fun AudioOnlyScreen(
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
                         Text(
-                            "Hermes treba odgovor.",
+                            stringResource(R.string.hermes_needs_answer),
                             modifier = Modifier.weight(1f),
                             style = MaterialTheme.typography.bodyMedium,
                         )
-                        TextButton(onClick = onOpenChat) { Text("Otvori razgovor") }
+                        TextButton(onClick = onOpenChat) { Text(stringResource(R.string.open_chat)) }
                     }
                 }
             }
@@ -369,7 +388,7 @@ fun AudioOnlyScreen(
                         IconButton(onClick = onClearMessage) {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "Zatvori",
+                                contentDescription = stringResource(R.string.cd_close),
                                 tint = MaterialTheme.colorScheme.onErrorContainer,
                                 modifier = Modifier.size(16.dp),
                             )
@@ -393,11 +412,11 @@ fun AudioOnlyScreen(
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
                         } else {
                             Text(
-                                "Hermes nije povezan.",
+                                stringResource(R.string.hermes_not_connected),
                                 modifier = Modifier.weight(1f),
                                 style = MaterialTheme.typography.bodySmall,
                             )
-                            TextButton(onClick = onConnect) { Text("Poveži") }
+                            TextButton(onClick = onConnect) { Text(stringResource(R.string.connect)) }
                         }
                     }
                 }

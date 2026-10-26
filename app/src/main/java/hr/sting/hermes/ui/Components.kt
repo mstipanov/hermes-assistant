@@ -49,11 +49,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import hr.sting.hermes.R
 import hr.sting.hermes.data.ApprovalPrompt
 import hr.sting.hermes.data.ChatMessage
 import hr.sting.hermes.data.ClarifyPrompt
@@ -62,7 +65,6 @@ import hr.sting.hermes.data.FileTransfer
 import hr.sting.hermes.data.FileTransferState
 import hr.sting.hermes.data.MessageRole
 import hr.sting.hermes.data.SessionRow
-import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
@@ -182,7 +184,7 @@ private fun FileCard(message: ChatMessage, onRetry: (String) -> Unit) {
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("Otvori")
+                        Text(stringResource(R.string.open))
                     }
                     TextButton(onClick = { shareSavedFile(context, file) }) {
                         Icon(
@@ -191,7 +193,7 @@ private fun FileCard(message: ChatMessage, onRetry: (String) -> Unit) {
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("Podijeli")
+                        Text(stringResource(R.string.share))
                     }
                 }
 
@@ -203,7 +205,7 @@ private fun FileCard(message: ChatMessage, onRetry: (String) -> Unit) {
                             modifier = Modifier.size(16.dp),
                         )
                         Spacer(Modifier.width(6.dp))
-                        Text("Pokušaj ponovno")
+                        Text(stringResource(R.string.retry))
                     }
                 }
 
@@ -213,16 +215,19 @@ private fun FileCard(message: ChatMessage, onRetry: (String) -> Unit) {
     }
 }
 
+@Composable
 private fun fileSubtitle(file: FileTransfer): String {
     val size = if (file.size > 0) formatFileSize(file.size) else ""
     return when (file.state) {
-        FileTransferState.DOWNLOADING -> listOf("Preuzimam s Hermesa…", size)
-            .filter { it.isNotBlank() }.joinToString(" · ")
+        FileTransferState.DOWNLOADING -> listOf(
+            stringResource(R.string.downloading_from_hermes),
+            size,
+        ).filter { it.isNotBlank() }.joinToString(" · ")
 
         FileTransferState.READY -> listOf(size, file.location.orEmpty())
             .filter { it.isNotBlank() }.joinToString(" · ")
 
-        FileTransferState.FAILED -> "Preuzimanje nije uspjelo"
+        FileTransferState.FAILED -> stringResource(R.string.download_failed)
     }
 }
 
@@ -243,7 +248,7 @@ private fun openSavedFile(context: Context, file: FileTransfer) {
     }
     runCatching { context.startActivity(intent) }
         .onFailure {
-            Toast.makeText(context, "Nema aplikacije koja može otvoriti ovu datoteku.", Toast.LENGTH_SHORT)
+            Toast.makeText(context, context.getString(R.string.no_app_to_open), Toast.LENGTH_SHORT)
                 .show()
         }
 }
@@ -257,11 +262,11 @@ private fun shareSavedFile(context: Context, file: FileTransfer) {
     }
     runCatching {
         context.startActivity(
-            Intent.createChooser(send, "Podijeli datoteku")
+            Intent.createChooser(send, context.getString(R.string.share_file))
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
         )
     }.onFailure {
-        Toast.makeText(context, "Dijeljenje nije dostupno.", Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, context.getString(R.string.sharing_unavailable), Toast.LENGTH_SHORT).show()
     }
 }
 
@@ -312,7 +317,7 @@ private fun ReasoningBlock(text: String) {
             )
             Spacer(Modifier.width(4.dp))
             Text(
-                text = "Razmišljanje",
+                text = stringResource(R.string.reasoning),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -429,7 +434,7 @@ fun ApprovalCard(prompt: ApprovalPrompt, onChoice: (String) -> Unit) {
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Potrebno odobrenje",
+                    stringResource(R.string.approval_required),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -463,16 +468,22 @@ fun ApprovalCard(prompt: ApprovalPrompt, onChoice: (String) -> Unit) {
             ) {
                 val allowed = prompt.choices.ifEmpty { listOf("once", "deny") }
                 if ("once" in allowed) {
-                    Button(onClick = { onChoice("once") }) { Text("Dopusti jednom") }
+                    Button(onClick = { onChoice("once") }) {
+                        Text(stringResource(R.string.allow_once))
+                    }
                 }
                 if ("session" in allowed && prompt.allowSession) {
-                    TextButton(onClick = { onChoice("session") }) { Text("Sesija") }
+                    TextButton(onClick = { onChoice("session") }) {
+                        Text(stringResource(R.string.allow_session))
+                    }
                 }
                 if ("always" in allowed && prompt.allowPermanent) {
-                    TextButton(onClick = { onChoice("always") }) { Text("Uvijek") }
+                    TextButton(onClick = { onChoice("always") }) {
+                        Text(stringResource(R.string.allow_always))
+                    }
                 }
                 TextButton(onClick = { onChoice("deny") }) {
-                    Text("Odbij", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.deny), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -500,7 +511,7 @@ fun DeviceActionCard(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    "Akcija na telefonu",
+                    stringResource(R.string.device_action_title),
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -511,7 +522,7 @@ fun DeviceActionCard(
                 modifier = Modifier.padding(top = 6.dp),
             )
             Text(
-                "Hermes traži dopuštenje prije izvršavanja. Provjeri je li to ono što želiš.",
+                stringResource(R.string.device_action_note),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 4.dp),
@@ -520,9 +531,9 @@ fun DeviceActionCard(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.padding(top = 10.dp),
             ) {
-                Button(onClick = onAllow) { Text("Dopusti") }
+                Button(onClick = onAllow) { Text(stringResource(R.string.allow)) }
                 TextButton(onClick = onDeny) {
-                    Text("Odbij", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.deny), color = MaterialTheme.colorScheme.error)
                 }
             }
         }
@@ -546,7 +557,7 @@ fun ClarifyDialog(prompt: ClarifyPrompt, onSubmit: (Map<String, String?>) -> Uni
                     )
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        "Hermes treba odgovor",
+                        stringResource(R.string.clarify_title),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                     )
@@ -584,9 +595,9 @@ fun ClarifyDialog(prompt: ClarifyPrompt, onSubmit: (Map<String, String?>) -> Uni
                     horizontalArrangement = Arrangement.End,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    TextButton(onClick = onDismiss) { Text("Odustani") }
+                    TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.width(6.dp))
-                    Button(onClick = { onSubmit(answers) }) { Text("Pošalji") }
+                    Button(onClick = { onSubmit(answers) }) { Text(stringResource(R.string.send)) }
                 }
             }
         }
@@ -599,6 +610,7 @@ fun SessionRowItem(
     current: Boolean,
     onClick: () -> Unit,
 ) {
+    val context = LocalContext.current
     Surface(
         color = if (current) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f) else Color.Transparent,
         shape = RoundedCornerShape(12.dp),
@@ -623,9 +635,18 @@ fun SessionRowItem(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+            val messages = pluralStringResource(
+                R.plurals.message_count,
+                session.messageCount,
+                session.messageCount,
+            )
+            val telegram = if (session.source.equals("telegram", ignoreCase = true)) {
+                " · " + stringResource(R.string.telegram_label)
+            } else {
+                ""
+            }
             Text(
-                relativeTime(session.startedAt.toLong()) + " · " + session.messageCount + " poruka" +
-                    (if (session.source.equals("telegram", ignoreCase = true)) " · Telegram" else ""),
+                relativeTime(context, session.startedAt.toLong()) + " · " + messages + telegram,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),
@@ -634,15 +655,18 @@ fun SessionRowItem(
     }
 }
 
-private fun relativeTime(epochSeconds: Long): String {
+private fun relativeTime(context: Context, epochSeconds: Long): String {
     if (epochSeconds <= 0) return ""
     val now = System.currentTimeMillis() / 1000
     val diff = (now - epochSeconds).coerceAtLeast(0)
     return when {
-        diff < 60 -> "sada"
+        diff < 60 -> context.getString(R.string.time_now)
         diff < 3600 -> "${diff / 60} min"
         diff < 86_400 -> "${diff / 3600} h"
         diff < 7 * 86_400 -> "${diff / 86_400} d"
-        else -> SimpleDateFormat("d.M.yyyy.", Locale("hr", "HR")).format(Date(epochSeconds * 1000))
+        else -> java.text.DateFormat.getDateInstance(
+            java.text.DateFormat.MEDIUM,
+            Locale.getDefault(),
+        ).format(Date(epochSeconds * 1000))
     }
 }

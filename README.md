@@ -25,6 +25,8 @@ update installation), so it is not intended for Google Play.
 - **Updates** — version check, download, and in-app installation with SHA-256 verification.
 - **Default assistant** — can take over the Android digital assistant role and the Quick Settings
   tile.
+- **English and Croatian UI** — the app follows the system language, with a per-app language
+  picker on Android 13+.
 
 ## Requirements
 

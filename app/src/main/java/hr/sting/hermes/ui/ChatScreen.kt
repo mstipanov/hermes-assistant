@@ -77,7 +77,9 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
+import hr.sting.hermes.R
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -129,6 +131,10 @@ fun ChatScreen(
     val scope = rememberCoroutineScope()
     val snackbar = remember { SnackbarHostState() }
     val context = LocalContext.current
+    val galleryFilename = stringResource(R.string.gallery_filename)
+    val fileFallbackName = stringResource(R.string.file)
+    val cameraFilename = stringResource(R.string.camera_filename)
+    val attachmentNotLoaded = stringResource(R.string.attachment_not_loaded)
     var assistantRoleHeld by remember { mutableStateOf(AssistantSettings.isRoleHeld(context)) }
     var assistantBannerDismissed by rememberSaveable { mutableStateOf(false) }
     val voiceDiag by VoiceDiagnostics.state.collectAsStateWithLifecycle()
@@ -151,7 +157,9 @@ fun ChatScreen(
             runCatching { readAttachment(context, uri, fallback) }
                 .onSuccess { attachment -> attachment?.let(onAddAttachment) }
                 .onFailure {
-                    snackbar.showSnackbar(it.message ?: "Prilog nije učitan.")
+                    snackbar.showSnackbar(
+                        it.message ?: attachmentNotLoaded,
+                    )
                 }
         }
     }
@@ -160,14 +168,14 @@ fun ChatScreen(
     ) { success ->
         val uri = cameraUri
         cameraUri = null
-        if (success && uri != null) ingest(uri, "Kamera.jpg")
+        if (success && uri != null) ingest(uri, cameraFilename)
     }
     val galleryLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.GetContent(),
-    ) { uri -> uri?.let { ingest(it, "Slika.jpg") } }
+    ) { uri -> uri?.let { ingest(it, galleryFilename) } }
     val fileLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.OpenDocument(),
-    ) { uri -> uri?.let { ingest(it, "Datoteka") } }
+    ) { uri -> uri?.let { ingest(it, fileFallbackName) } }
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -231,7 +239,9 @@ fun ChatScreen(
                     title = {
                         Column {
                             Text(
-                                text = state.title,
+                                text = state.title.ifBlank {
+                                    stringResource(R.string.new_chat)
+                                },
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleMedium,
@@ -248,17 +258,26 @@ fun ChatScreen(
                     },
                     navigationIcon = {
                         IconButton(onClick = { scope.launch { drawerState.open() } }) {
-                            Icon(Icons.Filled.Menu, contentDescription = "Razgovori")
+                            Icon(
+                                Icons.Filled.Menu,
+                                contentDescription = stringResource(R.string.sessions),
+                            )
                         }
                     },
                     actions = {
                         onBackToVoice?.let { back ->
                             IconButton(onClick = back) {
-                                Icon(Icons.Filled.GraphicEq, contentDescription = "Glasovni način")
+                                Icon(
+                                    Icons.Filled.GraphicEq,
+                                    contentDescription = stringResource(R.string.voice_mode),
+                                )
                             }
                         }
                         IconButton(onClick = onOpenSettings) {
-                            Icon(Icons.Filled.Settings, contentDescription = "Postavke")
+                            Icon(
+                                Icons.Filled.Settings,
+                                contentDescription = stringResource(R.string.cd_settings),
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(
@@ -285,9 +304,9 @@ fun ChatScreen(
 
                 if (!state.settings.handsFree) {
                     HandsFreeBanner(
-                        title = "Hey Hermes nije uključen",
-                        subtitle = "Uključi stalno slušanje da te Hermes čuje i kad je ekran ugašen.",
-                        action = "Uključi",
+                        title = stringResource(R.string.wake_word_off_title),
+                        subtitle = stringResource(R.string.wake_word_off_subtitle),
+                        action = stringResource(R.string.enable),
                         onAction = {
                             if (ContextCompat.checkSelfPermission(
                                     context,
@@ -302,10 +321,10 @@ fun ChatScreen(
                     )
                 } else if (!voiceDiag.serviceRunning) {
                     HandsFreeBanner(
-                        title = "Glasovni servis nije aktivan",
+                        title = stringResource(R.string.voice_service_inactive_title),
                         subtitle = voiceDiag.lastError
-                            ?: "Servis je zaustavljen. Pokreni ga za \"Hey Hermes\".",
-                        action = "Pokreni",
+                            ?: stringResource(R.string.voice_service_inactive_subtitle),
+                        action = stringResource(R.string.start),
                         onAction = onStartVoiceService,
                     )
                 }
@@ -438,13 +457,13 @@ private fun EmptyState(onSuggestion: (String) -> Unit) {
         }
         Spacer(Modifier.height(18.dp))
         Text(
-            "Kako mogu pomoći?",
+            stringResource(R.string.empty_chat_title),
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.SemiBold,
             textAlign = TextAlign.Center,
         )
         Text(
-            "Piši ili pričaj — Hermes ima pristup tvom Macu, Home Assistantu i alatima.",
+            stringResource(R.string.empty_chat_subtitle),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -452,9 +471,9 @@ private fun EmptyState(onSuggestion: (String) -> Unit) {
         )
         Spacer(Modifier.height(22.dp))
         listOf(
-            "Koliko je sati?",
-            "Što mi je danas na rasporedu?",
-            "Uključi svjetlo u dnevnoj sobi",
+            stringResource(R.string.suggestion_time),
+            stringResource(R.string.suggestion_schedule),
+            stringResource(R.string.suggestion_light),
         ).forEach { suggestion ->
             AssistChip(
                 onClick = { onSuggestion(suggestion) },
@@ -523,21 +542,21 @@ private fun AssistantBanner(onOpenSettings: () -> Unit, onDismiss: () -> Unit) {
             Spacer(Modifier.width(8.dp))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "Hermes nije zadani asistent",
+                    stringResource(R.string.default_assistant_title),
                     style = MaterialTheme.typography.labelLarge,
                     fontWeight = FontWeight.SemiBold,
                 )
                 Text(
-                    "Postavi ga da te dugi pritisak na side tipku odmah spoji s Hermesom.",
+                    stringResource(R.string.default_assistant_subtitle),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            TextButton(onClick = onOpenSettings) { Text("Postavi") }
+            TextButton(onClick = onOpenSettings) { Text(stringResource(R.string.set_up)) }
             IconButton(onClick = onDismiss) {
                 Icon(
                     Icons.Filled.Close,
-                    contentDescription = "Zatvori",
+                    contentDescription = stringResource(R.string.cd_close),
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -567,7 +586,7 @@ private fun ConnectionBanner(link: LinkState, onRetry: () -> Unit) {
                         color = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = onRetry) { Text("Pokušaj ponovno") }
+                    TextButton(onClick = onRetry) { Text(stringResource(R.string.retry)) }
                 }
                 is LinkState.Connecting -> {
                     CircularProgressIndicator(
@@ -576,19 +595,19 @@ private fun ConnectionBanner(link: LinkState, onRetry: () -> Unit) {
                     )
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        "Spajam se na Hermesa…",
+                        stringResource(R.string.connecting_to_hermes),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 else -> {
                     Text(
-                        "Nije povezan s Hermesom.",
+                        stringResource(R.string.not_connected_to_hermes),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.weight(1f),
                     )
-                    TextButton(onClick = onRetry) { Text("Poveži") }
+                    TextButton(onClick = onRetry) { Text(stringResource(R.string.connect)) }
                 }
             }
         }
@@ -614,7 +633,7 @@ private fun ErrorBanner(error: String, onDismiss: () -> Unit) {
             IconButton(onClick = onDismiss) {
                 Icon(
                     Icons.Filled.Close,
-                    contentDescription = "Zatvori",
+                    contentDescription = stringResource(R.string.cd_close),
                     modifier = Modifier.size(16.dp),
                     tint = MaterialTheme.colorScheme.onErrorContainer,
                 )
@@ -627,10 +646,10 @@ private fun ErrorBanner(error: String, onDismiss: () -> Unit) {
 private fun VoicePanel(voiceState: String, onCancel: () -> Unit) {
     if (voiceState == "idle") return
     val (label, active) = when (voiceState) {
-        "listening" -> "Slušam…" to true
-        "transcribing" -> "Prepoznajem govor…" to true
-        "thinking" -> "Hermes razmišlja…" to true
-        "speaking" -> "Hermes govori…" to false
+        "listening" -> stringResource(R.string.status_listening) to true
+        "transcribing" -> stringResource(R.string.status_transcribing) to true
+        "thinking" -> stringResource(R.string.status_thinking) to true
+        "speaking" -> stringResource(R.string.status_speaking) to false
         else -> return
     }
     Surface(
@@ -661,7 +680,13 @@ private fun VoicePanel(voiceState: String, onCancel: () -> Unit) {
                 modifier = Modifier.weight(1f),
             )
             TextButton(onClick = onCancel) {
-                Text(if (voiceState == "speaking") "Prekini" else "Otkaži")
+                Text(
+                    if (voiceState == "speaking") {
+                        stringResource(R.string.interrupt)
+                    } else {
+                        stringResource(R.string.cancel)
+                    },
+                )
             }
         }
     }
@@ -698,23 +723,23 @@ private fun InputBar(
                 IconButton(onClick = { attachMenu = true }) {
                     Icon(
                         Icons.Filled.AttachFile,
-                        contentDescription = "Prilog",
+                        contentDescription = stringResource(R.string.attachment),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 DropdownMenu(expanded = attachMenu, onDismissRequest = { attachMenu = false }) {
                     DropdownMenuItem(
-                        text = { Text("Slikaj kamerom") },
+                        text = { Text(stringResource(R.string.take_photo)) },
                         leadingIcon = { Icon(Icons.Filled.PhotoCamera, contentDescription = null) },
                         onClick = { attachMenu = false; onCamera() },
                     )
                     DropdownMenuItem(
-                        text = { Text("Iz galerije") },
+                        text = { Text(stringResource(R.string.from_gallery)) },
                         leadingIcon = { Icon(Icons.Filled.Image, contentDescription = null) },
                         onClick = { attachMenu = false; onGallery() },
                     )
                     DropdownMenuItem(
-                        text = { Text("Datoteka") },
+                        text = { Text(stringResource(R.string.file)) },
                         leadingIcon = { Icon(Icons.Filled.InsertDriveFile, contentDescription = null) },
                         onClick = { attachMenu = false; onFile() },
                     )
@@ -723,7 +748,7 @@ private fun InputBar(
             IconButton(onClick = onMic) {
                 Icon(
                     Icons.Filled.Mic,
-                    contentDescription = "Glas",
+                    contentDescription = stringResource(R.string.cd_voice),
                     tint = MaterialTheme.colorScheme.primary,
                 )
             }
@@ -745,7 +770,11 @@ private fun InputBar(
                     Box {
                         if (value.isBlank()) {
                             Text(
-                                if (hasAttachments) "Dodaj objašnjenje…" else "Napiši poruku…",
+                                if (hasAttachments) {
+                                    stringResource(R.string.add_description)
+                                } else {
+                                    stringResource(R.string.message_hint)
+                                },
                                 style = MaterialTheme.typography.bodyLarge,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -758,7 +787,7 @@ private fun InputBar(
                 IconButton(onClick = onStop) {
                     Icon(
                         Icons.Filled.Stop,
-                        contentDescription = "Zaustavi",
+                        contentDescription = stringResource(R.string.stop),
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
@@ -766,7 +795,7 @@ private fun InputBar(
                 IconButton(onClick = onSend, enabled = value.isNotBlank() || hasAttachments) {
                     Icon(
                         Icons.Filled.Send,
-                        contentDescription = "Pošalji",
+                        contentDescription = stringResource(R.string.send),
                         tint = if (value.isNotBlank() || hasAttachments) {
                             MaterialTheme.colorScheme.primary
                         } else {
@@ -816,12 +845,12 @@ private fun DrawerContent(
             Button(onClick = onNewChat, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Novi razgovor")
+                Text(stringResource(R.string.new_chat))
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
         Text(
-            "RAZGOVORI",
+            stringResource(R.string.conversations_upper),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 18.dp, top = 12.dp, bottom = 4.dp),
@@ -847,10 +876,10 @@ private fun DrawerContent(
         ) {
             Icon(Icons.Filled.Settings, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
-            Text("Postavke", modifier = Modifier.weight(1f))
+            Text(stringResource(R.string.settings), modifier = Modifier.weight(1f))
         }
         Text(
-            "Prijavljen kao ${state.account.ifBlank { "—" }}",
+            stringResource(R.string.signed_in_as, state.account.ifBlank { "—" }),
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(start = 18.dp, bottom = 14.dp),
@@ -861,10 +890,12 @@ private fun DrawerContent(
 @Composable
 private fun StatusText(link: LinkState, account: String) {
     val (text, color) = when (link) {
-        is LinkState.Ready -> "Povezan" to MaterialTheme.colorScheme.primary
-        is LinkState.Connecting -> "Spajam se…" to MaterialTheme.colorScheme.onSurfaceVariant
-        is LinkState.Failed -> "Nije povezan" to MaterialTheme.colorScheme.error
-        else -> "Offline" to MaterialTheme.colorScheme.onSurfaceVariant
+        is LinkState.Ready -> stringResource(R.string.status_connected) to MaterialTheme.colorScheme.primary
+        is LinkState.Connecting -> stringResource(R.string.status_connecting) to
+            MaterialTheme.colorScheme.onSurfaceVariant
+        is LinkState.Failed -> stringResource(R.string.status_not_connected) to
+            MaterialTheme.colorScheme.error
+        else -> stringResource(R.string.status_offline) to MaterialTheme.colorScheme.onSurfaceVariant
     }
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
@@ -874,7 +905,11 @@ private fun StatusText(link: LinkState, account: String) {
         )
         Spacer(Modifier.width(6.dp))
         Text(
-            if (account.isBlank()) text else "$text · $account",
+            if (account.isBlank()) {
+                text
+            } else {
+                stringResource(R.string.account_separator, text, account)
+            },
             style = MaterialTheme.typography.labelSmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )

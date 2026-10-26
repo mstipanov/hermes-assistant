@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Environment
+import hr.sting.hermes.R
 import hr.sting.hermes.data.UpdateInfo
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -26,7 +27,7 @@ object Updater {
     private const val APK_MIME = "application/vnd.android.package-archive"
     private val SHA256 = Regex("[0-9a-fA-F]{64}")
 
-    suspend fun check(currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
+    suspend fun check(context: Context, currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
         val connection = (URL("$VERSION_URL?t=${System.currentTimeMillis()}").openConnection()
             as HttpURLConnection).apply {
             connectTimeout = 15_000
@@ -43,7 +44,7 @@ object Updater {
                 ?.use { it.readText() }
                 .orEmpty()
             if (status !in 200..299) {
-                throw IOException("Server za ažuriranja je vratio HTTP $status")
+                throw IOException(context.getString(R.string.update_server_http, status))
             }
             val json = JSONObject(body)
             val latestCode = json.optInt("versionCode", 0)
@@ -52,7 +53,7 @@ object Updater {
             if (latestCode <= currentVersionCode || apkUrl.isBlank()) return@withContext null
             val parsed = Uri.parse(apkUrl)
             if (parsed.scheme != "https" || parsed.host != VERSION_HOST) {
-                throw IOException("Server nudi APK s neočekivane adrese ($apkUrl).")
+                throw IOException(context.getString(R.string.unexpected_apk_url, apkUrl))
             }
             val sha256 = json.optString("sha256").trim()
                 .takeIf { SHA256.matches(it) }
@@ -81,11 +82,11 @@ object Updater {
         onProgress: (Float?) -> Unit,
     ) {
         val manager = context.getSystemService(DownloadManager::class.java)
-            ?: throw IOException("DownloadManager nije dostupan")
+            ?: throw IOException(context.getString(R.string.download_manager_unavailable))
         val fileName = "Hermes-${info.versionName}-${System.currentTimeMillis()}.apk"
         val request = DownloadManager.Request(Uri.parse(info.apkUrl)).apply {
-            setTitle("Hermes ${info.versionName}")
-            setDescription("Preuzimanje ažuriranja…")
+            setTitle(context.getString(R.string.update_download_title, info.versionName))
+            setDescription(context.getString(R.string.update_download_description))
             setMimeType(APK_MIME)
             setNotificationVisibility(
                 DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED,
@@ -114,7 +115,9 @@ object Updater {
                 when (status) {
                     DownloadManager.STATUS_SUCCESSFUL -> {
                         val uri = manager.getUriForDownloadedFile(id)
-                            ?: throw IOException("Preuzeti APK nije dostupan")
+                            ?: throw IOException(
+                                context.getString(R.string.downloaded_apk_unavailable),
+                            )
                         if (!info.sha256.isNullOrBlank()) {
                             try {
                                 verifySha256(context, uri, info.sha256)
@@ -134,19 +137,21 @@ object Updater {
                         val reason = it.getInt(
                             it.getColumnIndexOrThrow(DownloadManager.COLUMN_REASON),
                         )
-                        throw IOException("Preuzimanje nije uspjelo (razlog $reason)")
+                        throw IOException(
+                            context.getString(R.string.download_failed_reason, reason),
+                        )
                     }
                 }
             }
             delay(400)
         }
-        throw IOException("Preuzimanje traje predugo")
+        throw IOException(context.getString(R.string.download_timeout))
     }
 
     private fun verifySha256(context: Context, uri: Uri, expected: String) {
         val digest = MessageDigest.getInstance("SHA-256")
         val stream = context.contentResolver.openInputStream(uri)
-            ?: throw IOException("Preuzeti APK nije dostupan")
+            ?: throw IOException(context.getString(R.string.downloaded_apk_unavailable))
         stream.use { input ->
             val buffer = ByteArray(64 * 1024)
             while (true) {
@@ -157,7 +162,7 @@ object Updater {
         }
         val actual = digest.digest().joinToString("") { "%02x".format(it) }
         if (!actual.equals(expected, ignoreCase = true)) {
-            throw IOException("Kontrolna suma APK-a se ne poklapa — instalacija je zaustavljena.")
+            throw IOException(context.getString(R.string.checksum_mismatch))
         }
     }
 

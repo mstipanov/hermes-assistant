@@ -61,7 +61,7 @@ class HermesService : Service() {
         }
         if (!micGranted) {
             VoiceDiagnostics.update {
-                it.copy(lastError = "Dozvola za mikrofon nije dana. Postavke → Dozvole → Mikrofon.")
+                it.copy(lastError = getString(R.string.mic_permission_not_granted))
             }
             stopSelf()
             return
@@ -72,7 +72,12 @@ class HermesService : Service() {
         } catch (error: Exception) {
             Log.e(TAG, "startForeground failed", error)
             VoiceDiagnostics.update {
-                it.copy(lastError = "Servis se nije mogao pokrenuti: ${error.message}")
+                it.copy(
+                    lastError = getString(
+                        R.string.service_start_failed,
+                        error.message ?: error.javaClass.simpleName,
+                    ),
+                )
             }
             stopSelf()
             return
@@ -127,7 +132,7 @@ class HermesService : Service() {
                     VoiceDiagnostics.update {
                         it.copy(
                             lastError = it.lastError
-                                ?: "Wake word model se nije učitao (vidi KWS grešku).",
+                                ?: getString(R.string.kws_model_failed),
                         )
                     }
                     delay(8_000)
@@ -136,7 +141,7 @@ class HermesService : Service() {
                 val record = openRecord()
                 if (record == null) {
                     VoiceDiagnostics.update {
-                        it.copy(lastError = "Mikrofon je zauzet ili nedostupan.")
+                        it.copy(lastError = getString(R.string.mic_busy))
                     }
                     delay(2_000)
                     continue
@@ -160,7 +165,12 @@ class HermesService : Service() {
                 } catch (error: Exception) {
                     Log.w(TAG, "KWS mic loop", error)
                     VoiceDiagnostics.update {
-                        it.copy(lastError = "Mikrofon: ${error.message ?: error.javaClass.simpleName}")
+                        it.copy(
+                            lastError = getString(
+                                R.string.mic_error,
+                                error.message ?: error.javaClass.simpleName,
+                            ),
+                        )
                     }
                 } finally {
                     if (activeRecord === record) activeRecord = null
@@ -229,13 +239,13 @@ class HermesService : Service() {
         )
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher)
-            .setContentTitle("Hermes sluša")
-            .setContentText("Reci \"Hey Hermes\"")
+            .setContentTitle(getString(R.string.notif_title))
+            .setContentText(getString(R.string.notif_text))
             .setContentIntent(openIntent)
             .setOngoing(true)
             .setSilent(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
-            .addAction(0, "Zaustavi", stopIntent)
+            .addAction(0, getString(R.string.notif_stop), stopIntent)
             .build()
     }
 
@@ -243,10 +253,10 @@ class HermesService : Service() {
         val manager = getSystemService(NotificationManager::class.java)
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Hermes glasovni asistent",
+            getString(R.string.notif_channel_name),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Stalno slušanje wake worda i glasovni odgovori"
+            description = getString(R.string.notif_channel_desc)
             setShowBadge(false)
         }
         manager.createNotificationChannel(channel)

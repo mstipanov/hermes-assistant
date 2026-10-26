@@ -1,0 +1,406 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hermes</string>
+
+    <!-- Common -->
+    <string name="connect_title">Poveži Hermesa</string>
+    <string name="connect_subtitle">Unesi pristupne podatke svog Hermes servera. Lozinka i Access tajna ostaju šifrirani na ovom telefonu.</string>
+    <string name="server_url">Adresa servera</string>
+    <string name="api_token">API token</string>
+    <string name="api_token_recommended">API token (preporučeno)</string>
+    <string name="api_token_help">Token generiraj na Macu: tools/make_api_key.py. Ako ga upišeš, lozinka nije potrebna.</string>
+    <string name="or_password_login">ili se prijavi lozinkom</string>
+    <string name="username">Korisničko ime</string>
+    <string name="password">Lozinka</string>
+    <string name="access_client_id">Access Client ID</string>
+    <string name="access_client_secret">Access Client Secret</string>
+    <string name="hide_cloudflare">Sakrij Cloudflare postavke</string>
+    <string name="cloudflare_access">Cloudflare Access (service token)</string>
+    <string name="service_token_note">Service token se ne ugrađuje u APK — unosi se samo ovdje.</string>
+    <string name="access_required">Za hermes.sting.hr oba Cloudflare Access polja su obavezna.</string>
+    <string name="test_connection">Testiraj vezu</string>
+    <string name="save_and_start">Spremi i kreni</string>
+    <string name="onboarding_tip">Savjet: ako server nije javno dostupan, upiši lokalnu adresu (npr. http://192.168.8.37:9119).</string>
+    <string name="save">Spremi</string>
+    <string name="cancel">Odustani</string>
+    <string name="back">Natrag</string>
+    <string name="connection_section">Povezivanje</string>
+    <string name="diagnostics">Diagnostika</string>
+    <string name="link_connected">povezan</string>
+    <string name="link_connecting">spajam se…</string>
+    <string name="link_error">greška</string>
+    <string name="link_not_connected">nije povezan</string>
+    <string name="toggle_on">uključeni</string>
+    <string name="toggle_off">isključeni</string>
+    <string name="tts_label">TTS</string>
+    <string name="stt_label">STT</string>
+    <string name="send">Pošalji</string>
+    <string name="stop">Zaustavi</string>
+    <string name="deny">Odbij</string>
+    <string name="retry">Pokušaj ponovno</string>
+    <string name="open">Otvori</string>
+    <string name="share">Podijeli</string>
+    <string name="connect">Poveži</string>
+    <string name="enable">Uključi</string>
+    <string name="new_chat">Novi razgovor</string>
+    <string name="sessions">Razgovori</string>
+    <string name="conversations_upper">RAZGOVORI</string>
+    <string name="start">Pokreni</string>
+    <string name="set_up">Postavi</string>
+    <string name="attachment">Prilog</string>
+    <string name="file">Datoteka</string>
+    <string name="camera_filename">Kamera.jpg</string>
+    <string name="gallery_filename">Slika.jpg</string>
+    <string name="cd_voice">Glas</string>
+    <string name="settings">Postavke</string>
+    <string name="message_hint">Napiši poruku…</string>
+    <string name="shortcut_listen_short">Hermes</string>
+    <string name="shortcut_listen_long">Otvori Hermesa</string>
+    <string name="tile_label">Hermes</string>
+
+    <!-- Audio-only screen -->
+    <string name="status_not_connected">Nisam povezan</string>
+    <string name="hint_check_settings">Provjeri vezu u Postavkama</string>
+    <string name="status_listening">Slušam…</string>
+    <string name="hint_tap_to_stop">Dodirni orb da prekineš</string>
+    <string name="status_transcribing">Prepoznajem govor…</string>
+    <string name="status_thinking">Hermes razmišlja…</string>
+    <string name="status_speaking">Hermes govori…</string>
+    <string name="hint_tap_to_interrupt">Dodirni orb za prekid</string>
+    <string name="status_ready">Spreman</string>
+    <string name="hint_tap_and_speak">Dodirni orb i reci što trebaš</string>
+    <string name="status_connected">Povezan</string>
+    <string name="status_connecting">Spajam se…</string>
+    <string name="status_offline">Offline</string>
+    <string name="cd_chat">Razgovor</string>
+    <string name="cd_settings">Postavke</string>
+    <string name="cd_close">Zatvori</string>
+    <string name="replay_answer">Ponovi odgovor</string>
+    <string name="replay">Ponovi</string>
+    <string name="stop_listening">Zaustavi slušanje</string>
+    <string name="interrupt">Prekini</string>
+    <string name="voice_reply">Glasovni odgovor</string>
+    <string name="text_reply">Tekstualni odgovor</string>
+    <string name="open_chat">Otvori razgovor</string>
+    <string name="hermes_needs_answer">Hermes treba odgovor.</string>
+    <string name="hermes_not_connected">Hermes nije povezan.</string>
+
+    <!-- Files and messages -->
+    <string name="downloading_from_hermes">Preuzimam s Hermesa…</string>
+    <string name="download_failed">Preuzimanje nije uspjelo</string>
+    <string name="no_app_to_open">Nema aplikacije koja može otvoriti ovu datoteku.</string>
+    <string name="share_file">Podijeli datoteku</string>
+    <string name="sharing_unavailable">Dijeljenje nije dostupno.</string>
+    <string name="remove_attachment">Ukloni prilog</string>
+    <string name="attachment_not_loaded">Prilog nije učitan.</string>
+    <string name="reasoning">Razmišljanje</string>
+    <string name="approval_required">Potrebno odobrenje</string>
+    <string name="allow_once">Dopusti jednom</string>
+    <string name="allow_session">Sesija</string>
+    <string name="allow_always">Uvijek</string>
+    <string name="allow">Dopusti</string>
+    <string name="device_action_title">Akcija na telefonu</string>
+    <string name="device_action_note">Hermes traži dopuštenje prije izvršavanja. Provjeri je li to ono što želiš.</string>
+    <string name="clarify_title">Hermes treba odgovor</string>
+    <string name="time_now">sada</string>
+    <string name="telegram_label">Telegram</string>
+    <plurals name="message_count">
+        <item quantity="one">%d poruka</item>
+        <item quantity="few">%d poruke</item>
+        <item quantity="other">%d poruka</item>
+    </plurals>
+
+    <!-- Chat screen -->
+    <string name="voice_mode">Glasovni način</string>
+    <string name="wake_word_off_title">Hey Hermes nije uključen</string>
+    <string name="wake_word_off_subtitle">Uključi stalno slušanje da te Hermes čuje i kad je ekran ugašen.</string>
+    <string name="voice_service_inactive_title">Glasovni servis nije aktivan</string>
+    <string name="voice_service_inactive_subtitle">Servis je zaustavljen. Pokreni ga za \"Hey Hermes\".</string>
+    <string name="empty_chat_title">Kako mogu pomoći?</string>
+    <string name="empty_chat_subtitle">Piši ili pričaj — Hermes ima pristup tvom Macu, Home Assistantu i alatima.</string>
+    <string name="suggestion_time">Koliko je sati?</string>
+    <string name="suggestion_schedule">Što mi je danas na rasporedu?</string>
+    <string name="suggestion_light">Uključi svjetlo u dnevnoj sobi</string>
+    <string name="default_assistant_title">Hermes nije zadani asistent</string>
+    <string name="default_assistant_subtitle">Postavi ga da te dugi pritisak na side tipku odmah spoji s Hermesom.</string>
+    <string name="connecting_to_hermes">Spajam se na Hermesa…</string>
+    <string name="not_connected_to_hermes">Nije povezan s Hermesom.</string>
+    <string name="take_photo">Slikaj kamerom</string>
+    <string name="from_gallery">Iz galerije</string>
+    <string name="add_description">Dodaj objašnjenje…</string>
+    <string name="signed_in_as">Prijavljen kao %1$s</string>
+    <string name="account_separator">%1$s · %2$s</string>
+
+    <!-- Settings: assistant -->
+    <string name="system_assistant">Sustavni asistent</string>
+    <string name="system_assistant_desc">Postavi Hermesa kao zadani digitalni asistent. Dugi pritisak na side/home tipku tada otvara Hermesa i odmah počinje slušati.</string>
+    <string name="assistant_is_default">Hermes je zadani asistent</string>
+    <string name="set_as_default_assistant">Postavi kao zadanog asistenta</string>
+    <string name="default_apps">Zadane aplikacije</string>
+    <string name="side_key">Side tipka</string>
+    <string name="open_assist_voice_input">Otvori Assist &amp; voice input</string>
+    <string name="samsung_instructions">Samsung: Postavke → Napredne funkcije → Tipka sa strane → Pritisni i drži → Digitalni asistent. Ili Postavke → Aplikacije → Zadane aplikacije → Digitalni asistent.</string>
+    <string name="hotword_note">Hotword \"Hey Google\" / \"Hi Bixby\" ostaje vezan uz Google/Bixby i ne može se preuzeti. Hermes zato ima vlastiti \"Hey Hermes\" (Hands-free) koji radi iz njegovog servisa.</string>
+    <string name="assistant_connected_toast">Hermes je sada zadani digitalni asistent.</string>
+    <string name="assistant_not_set">Hermes nije postavljen kao asistent. Otvori Postavke → Aplikacije → Zadane aplikacije.</string>
+
+    <!-- Settings: permissions -->
+    <string name="action_permissions">Dozvole za akcije</string>
+    <string name="action_permissions_desc">Hermes može otvarati aplikacije, puštati glazbu, postavljati alarme i otvarati URL-ove bez posebnih dozvola. Za pronalaženje kontakata treba pristup kontaktima, a za direktan poziv (bez dialera) i CALL_PHONE.</string>
+    <string name="confirm_device_actions">Potvrdi akcije na telefonu</string>
+    <string name="confirm_device_actions_desc">Prije poziva, SMS-a, alarma, URL-a ili pokretanja aplikacije Hermes traži tvoj pristanak.</string>
+    <string name="contacts_granted">Kontakti ✓</string>
+    <string name="allow_contacts">Dozvoli kontakte</string>
+    <string name="calls_granted">Pozivi ✓</string>
+    <string name="allow_calls">Dozvoli pozive</string>
+
+    <!-- Settings: views and voice -->
+    <string name="default_view">Zadani prikaz</string>
+    <string name="audio_only">Audio only</string>
+    <string name="chat">Razgovor</string>
+    <string name="audio_only_desc">Audio only je veliki orb, status i zadnji odgovor — bez tipkovnice i transkripta. Idealno za auto i MyCar.</string>
+    <string name="stt_section">Prepoznavanje govora (STT)</string>
+    <string name="google_fast">Google (brzo)</string>
+    <string name="hermes_server_private">Hermes server (privatno)</string>
+    <string name="stt_desc">Google koristi isti recognition servis kao Gboard i mnogo je brži. Audio ide Googleu. Hermes server šalje snimku na tvoj Mac (Whisper medium) — privatnije, ali sporije.</string>
+    <string name="open_speech_settings">Otvori postavke prepoznavanja govora</string>
+    <string name="voice_section">Glas</string>
+    <string name="continue_listening">Nastavi slušati nakon odgovora</string>
+    <string name="continue_listening_desc">Nakon što Hermes završi odgovor, odmah ponovno otvori mikrofon za sljedeće pitanje.</string>
+    <string name="voice_replies">Glasovni odgovori</string>
+    <string name="voice_replies_desc">Hermes govori samo kad je pitanje bilo glasovno. Na tipkani tekst odgovara samo tekstom.</string>
+    <string name="tts_voice">TTS glas</string>
+    <string name="android_fast">Android (brzo)</string>
+    <string name="hermes_gabrijela">Hermes Gabrijela</string>
+    <string name="tts_desc">Android koristi glas koji telefon ima (Samsung je često potpuno lokalan, Google može koristiti mrežni glas) — počinje gotovo odmah. Hermes Gabrijela je kvalitetniji neuralni glas, ali prvi zvuk čeka server.</string>
+    <string name="phone_voice">Glas telefona</string>
+    <string name="no_voices">Još nema popisa glasova. Otvori postavke glasa telefona i instaliraj hrvatski glas, ili odaberi Hermes Gabrijelu.</string>
+    <string name="default_phone_voice">Zadani glas telefona</string>
+    <string name="open_phone_voice_settings">Otvori postavke glasa telefona</string>
+    <string name="share_telegram">Dijeli sesiju s Telegramom</string>
+    <string name="share_telegram_desc">App nastavlja isti razgovor kao Telegram bot; povijest se osvježi prije svakog pitanja.</string>
+    <string name="hands_free">Hands-free</string>
+    <string name="hands_free_desc">Slušaj \"Hey Hermes\" dok je aplikacija u pozadini (traži mikrofon i stalnu notifikaciju).</string>
+    <string name="open_listening_mode">Otvori u načinu slušanja</string>
+    <string name="open_listening_mode_desc">Kad god otvoriš Hermesa (uključujući Samsung dvostruki pritisak → Open app), odmah počne slušati.</string>
+    <string name="mic_permission_denied">Dozvola za mikrofon je odbijena. Otvori dozvole aplikacije i uključi Mikrofon.</string>
+
+    <!-- Settings: diagnostics and updates -->
+    <string name="voice_diagnostics">Glasovna diagnostika</string>
+    <string name="service">Servis</string>
+    <string name="not_running">ne radi</string>
+    <string name="running">radi</string>
+    <string name="wake_word_model">Wake word model</string>
+    <string name="loaded">učitan</string>
+    <string name="not_loaded">nije učitan</string>
+    <string name="microphone">Mikrofon</string>
+    <string name="not_allowed">nije dozvoljen</string>
+    <string name="allowed">dozvoljen</string>
+    <string name="last_detection">Zadnja detekcija</string>
+    <string name="stt_test">STT test</string>
+    <string name="error">Greška</string>
+    <string name="test_microphone">Testiraj mikrofon</string>
+    <string name="test_wake_word">Testiraj \"Hey Hermes\"</string>
+    <string name="test_voice">Testiraj glas (TTS)</string>
+    <string name="open_app_permissions">Otvori dozvole aplikacije</string>
+    <string name="reconnect">Ponovno poveži</string>
+    <string name="testing">Testiram…</string>
+    <string name="link">Veza</string>
+    <string name="account">Račun</string>
+    <string name="set">postavljen</string>
+    <string name="not_set">nije postavljen</string>
+    <string name="cloudflare_access_status">Cloudflare Access</string>
+    <string name="last_error">Zadnja greška</string>
+    <string name="version">Verzija</string>
+    <string name="updates">Ažuriranje</string>
+    <string name="checking">Provjeravam…</string>
+    <string name="check_updates">Provjeri ažuriranja</string>
+    <string name="up_to_date">Aplikacija je ažurna (%1$s).</string>
+    <string name="update_error">Ažuriranje: %1$s</string>
+    <string name="update_available">Dostupna verzija %1$s.</string>
+    <string name="download_and_install">Preuzmi i instaliraj</string>
+    <string name="downloading">Preuzimam…</string>
+    <string name="downloading_progress">Preuzimam… %1$d%%</string>
+    <string name="last_rpc_log">Zadnji RPC log:</string>
+    <string name="copy_diagnostics">Kopiraj diagnostiku</string>
+    <string name="logout_and_clear">Odjavi se i obriši podatke</string>
+    <string name="secrets_note">Lozinka i Access tajna spremaju se AES/GCM ključem iz Android Keystorea. Ne napuštaju telefon.</string>
+
+    <!-- Attachments -->
+    <string name="attachment_too_large">Datoteka je prevelika (max 8 MB).</string>
+    <string name="attachment_unreadable">Datoteku nije moguće pročitati.</string>
+    <string name="attachment_empty">Datoteka je prazna.</string>
+
+    <!-- Controller errors and notices -->
+    <string name="did_not_hear">Nisam te čuo. Pokušaj ponovno.</string>
+    <string name="switching_to_hermes_stt">%1$s Prelazim na Hermes STT — ponovi pitanje.</string>
+    <string name="telegram_history_refreshed">Osvježena je povijest iz Telegrama (%1$s).</string>
+    <string name="telegram_history_failed">Sesija s Telegramom nije osvježena: %1$s</string>
+    <string name="telegram_continues">Nastavljaš Telegram razgovor — u povijesti je %1$s.</string>
+    <string name="hermes_still_answering">Hermes još odgovara. Zaustavi ga prije novog pitanja.</string>
+    <string name="not_connected_check_settings">Nisam povezan s Hermesom. Provjeri Postavke → Testiraj vezu.</string>
+    <string name="allow_mic_in_settings">Dozvoli mikrofon u Postavkama → Dozvole za akcije.</string>
+    <string name="google_stt_unavailable">Google STT nije dostupan; koristim Hermes STT.</string>
+    <string name="voice_replies_disabled">Glasovni odgovori su isključeni u Postavkama.</string>
+    <string name="tts_test_text">Bok, ovo je test Hermesovog glasa. Ako ovo čuješ, glas radi.</string>
+    <string name="android_tts_no_croatian">Android TTS nema hrvatski glas — koristim Hermesov glas.</string>
+    <string name="attachment_empty_error">Prilog je prazan.</string>
+    <string name="attachment_too_large_error">Prilog je prevelik (max %1$d MB).</string>
+    <string name="server_connection_not_open">Veza sa serverom nije otvorena</string>
+    <string name="attachment_named_too_large">%1$s je prevelik (max 8 MB).</string>
+    <string name="attached_file_prefix">Priložena datoteka: </string>
+    <string name="hermes_still_answering_stop">Hermes još odgovara. Pričekaj odgovor ili pritisni Stop.</string>
+    <string name="voice_replies_disabled_text_only">Glasovni odgovori su isključeni u Postavkama — odgovor je samo tekst.</string>
+    <string name="sending_attachments">Šaljem priloge…</string>
+    <string name="attachment_prompt">Pogledaj priloge i reci mi što vidiš.</string>
+    <string name="session_could_not_recover">Sesija se nije mogla obnoviti</string>
+    <string name="hermes_reported_error">Hermes je prijavio grešku</string>
+    <string name="no_response_35s">Nema odgovora od Hermesa nakon 35 s. Provjeri vezu ili pošalji ponovno.</string>
+    <string name="mobile_unsupported">Mobilna aplikacija ne podržava ovaj upit</string>
+    <string name="desktop_only_action">Hermes traži radnju dostupnu samo na desktopu (%1$s).</string>
+    <string name="replaced_by_new_action">Zamijenjeno novom akcijom.</string>
+    <string name="user_did_not_confirm">Korisnik nije potvrdio akciju na telefonu.</string>
+    <string name="action_timed_out">Akcija na telefonu nije potvrđena (isteklo).</string>
+    <string name="user_denied_action">Korisnik je odbio akciju na telefonu.</string>
+    <string name="device_action_call">Poziv</string>
+    <string name="device_action_sms">SMS</string>
+    <string name="device_action_open_link">Otvaranje poveznice</string>
+    <string name="device_action_alarm">Alarm</string>
+    <string name="device_action_launch_app">Pokretanje aplikacije</string>
+    <string name="device_action_music">Glazba</string>
+    <string name="device_action_media_control">Media kontrola</string>
+    <string name="device_action_target">%1$s: %2$s</string>
+    <string name="file_arriving">Hermes šalje datoteku: %1$s</string>
+    <string name="file_not_downloaded">Datoteka nije preuzeta: %1$s</string>
+    <string name="file_outside_origin">Server je poslao adresu datoteke izvan svoje domene.</string>
+    <string name="tool_default">alat</string>
+    <string name="mic_no_signal_peak_short">Mikrofon ne daje signal (peak=%1$d).</string>
+    <string name="voice_mode_coming_soon">Glasovni način rada stiže u sljedećem koraku.</string>
+    <string name="hands_free_enabled">Hands-free je uključen. Reci \"Hey Hermes\".</string>
+    <string name="voice_service_started">Glasovni servis je pokrenut. Reci \"Hey Hermes\".</string>
+    <string name="not_connected_test_settings">Nisam povezan s Hermesom. Testiraj vezu u Postavkama.</string>
+    <string name="recording_6s">Snimam 6 s…</string>
+    <string name="mic_no_signal_peak">Mikrofon ne daje signal (peak=%1$d). Provjeri dozvolu i da mik nije zauzet.</string>
+    <string name="mic_no_signal">Mikrofon ne daje signal. Provjeri dozvolu za mikrofon i da ga Bixby/Google ne drži.</string>
+    <string name="nothing_recognized">ništa nije prepoznato</string>
+    <string name="mic_works_no_stt">Mikrofon radi, ali STT nije prepoznao govor.</string>
+    <string name="stt_test_result">STT test: \"%1$s\"</string>
+    <string name="listening_6s">Slušam 6 s…</string>
+    <string name="wake_not_recognized_try_english">Nije prepoznato — pokušaj izgovoriti engleski \"Hey Hermes\".</string>
+    <string name="kws_model_not_loaded">KWS model se nije učitao.</string>
+    <string name="wake_word_recognized">Wake word prepoznat: %1$s</string>
+    <string name="wake_word_not_recognized">Wake word nije prepoznat. Vidi diagnostiku u Postavkama.</string>
+    <string name="update_check_failed">Provjera ažuriranja nije uspjela.</string>
+    <string name="allow_install_from_hermes">Dozvoli instalaciju iz Hermesa, pa ponovno pritisni Preuzmi i instaliraj.</string>
+    <string name="installer_opened">Instalacijski dijalog je otvoren.</string>
+    <string name="update_download_failed">Preuzimanje ažuriranja nije uspjelo.</string>
+    <string name="connected_as">Povezan kao %1$s.</string>
+    <string name="telegram_busy">Telegram upravo piše u ovu sesiju. Pričekaj da završi, pa pošalji ponovno.</string>
+    <string name="server_error">Greška servera</string>
+    <string name="ws_closed">WS zatvoren</string>
+    <string name="rpc_connection_closed">Veza je zatvorena</string>
+    <string name="rpc_connection_failed">Veza nije uspjela</string>
+    <string name="rpc_connection_interrupted">Veza je prekinuta</string>
+    <string name="mic_unavailable">Mikrofon nije dostupan</string>
+    <string name="mic_cannot_open">Mikrofon se nije mogao otvoriti</string>
+    <string name="kws_no_stream">KeywordSpotter nije stvorio stream</string>
+    <string name="files_channel_name">Primljene datoteke</string>
+    <string name="file_received_title">Datoteka primljena</string>
+
+    <!-- Device actions -->
+    <string name="unknown_action">Nepoznata akcija: %1$s</string>
+    <string name="missing_app_name">Nedostaje ime aplikacije</string>
+    <string name="multiple_apps">Pronađeno je više aplikacija. Reci točnije ime.</string>
+    <string name="app_not_found">Nisam našao aplikaciju \'%1$s\'.</string>
+    <string name="app_no_launcher">Aplikacija %1$s nema pokretačku aktivnost</string>
+    <string name="missing_song">Nedostaje naziv pjesme/izvođača</string>
+    <string name="music_requested">Zatražio sam od zadane glazbene aplikacije da pusti \'%1$s\'.</string>
+    <string name="spotify_search">Otvara Spotify pretragu za \'%1$s\'.</string>
+    <string name="youtube_search">Otvara YouTube Music pretragu za \'%1$s\'.</string>
+    <string name="unknown_media_command">Nepoznata media komanda: %1$s</string>
+    <string name="audio_manager_unavailable">AudioManager nije dostupan</string>
+    <string name="media_control_not_allowed">Media kontrola nije dopuštena: %1$s</string>
+    <string name="missing_contact_or_number">Nedostaje ime kontakta ili broj</string>
+    <string name="contacts_permission_needed">Za pronalaženje kontakta treba dozvola za kontakte.</string>
+    <string name="contact_not_found">Nisam našao kontakt \'%1$s\'.</string>
+    <string name="multiple_contacts">Pronašao sam više kontakata. Reci punije ime.</string>
+    <string name="calling">Pozivam %1$s.</string>
+    <string name="dialer_with_number">Otvarao sam dialer s brojem za %1$s — potvrdi poziv.</string>
+    <string name="only_http_urls">Dopuštene su samo http/https adrese</string>
+    <string name="time_format_hhmm">Vrijeme mora biti u formatu HH:mm</string>
+    <string name="invalid_hour">Neispravan sat</string>
+    <string name="invalid_minute">Neispravna minuta</string>
+    <string name="invalid_time">Neispravno vrijeme</string>
+    <string name="default_alarm_label">Hermes alarm</string>
+    <string name="alarm_set">Alarm je postavljen za %1$s.</string>
+    <string name="contacts_permission_needed_short">Za kontakt treba dozvola za kontakte.</string>
+    <string name="sms_opened">Otvarao sam SMS poruku — potvrdi slanje.</string>
+    <string name="permission_hint">Otvori Hermes → Postavke → Dozvole za akcije i dopusti pristup.</string>
+
+    <!-- Files -->
+    <string name="server_returned_no_file">Server nije vratio datoteku.</string>
+    <string name="cannot_save_file">Datoteku nije moguće spremiti.</string>
+    <string name="file_too_large_200">Datoteka je veća od 200 MB.</string>
+    <string name="access_denied">Server ne dopušta pristup datoteci.</string>
+    <string name="file_no_longer_exists">Datoteka više ne postoji na serveru.</string>
+    <string name="file_too_large_transfer">Datoteka je prevelika za prijenos.</string>
+    <string name="download_failed_http">Preuzimanje nije uspjelo (HTTP %1$d).</string>
+
+    <!-- Updates -->
+    <string name="update_server_http">Server za ažuriranja je vratio HTTP %1$d</string>
+    <string name="unexpected_apk_url">Server nudi APK s neočekivane adrese (%1$s).</string>
+    <string name="download_manager_unavailable">DownloadManager nije dostupan</string>
+    <string name="update_download_title">Hermes %1$s</string>
+    <string name="update_download_description">Preuzimanje ažuriranja…</string>
+    <string name="downloaded_apk_unavailable">Preuzeti APK nije dostupan</string>
+    <string name="download_failed_reason">Preuzimanje nije uspjelo (razlog %1$d)</string>
+    <string name="download_timeout">Preuzimanje traje predugo</string>
+    <string name="checksum_mismatch">Kontrolna suma APK-a se ne poklapa — instalacija je zaustavljena.</string>
+
+    <!-- Voice service and notifications -->
+    <string name="mic_permission_not_granted">Dozvola za mikrofon nije dana. Postavke → Dozvole → Mikrofon.</string>
+    <string name="service_start_failed">Servis se nije mogao pokrenuti: %1$s</string>
+    <string name="kws_model_failed">Wake word model se nije učitao (vidi KWS grešku).</string>
+    <string name="mic_busy">Mikrofon je zauzet ili nedostupan.</string>
+    <string name="mic_error">Mikrofon: %1$s</string>
+    <string name="notif_title">Hermes sluša</string>
+    <string name="notif_text">Reci \"Hey Hermes\"</string>
+    <string name="notif_stop">Zaustavi</string>
+    <string name="notif_channel_name">Hermes glasovni asistent</string>
+    <string name="notif_channel_desc">Stalno slušanje wake worda i glasovni odgovori</string>
+
+    <!-- Speech recognition -->
+    <string name="stt_unavailable">SpeechRecognizer nije dostupan: %1$s</string>
+    <string name="stt_mic_unavailable">Mikrofon za Google STT nije dostupan: %1$s</string>
+    <string name="stt_mic_error">Greška mikrofona (Google STT).</string>
+    <string name="stt_client_rejected">Google STT klijent je odbio zahtjev.</string>
+    <string name="stt_no_mic_permission">Nema dozvole za mikrofon.</string>
+    <string name="stt_no_network">Google STT nema mrežu.</string>
+    <string name="stt_network_timeout">Google STT mreža je istekla.</string>
+    <string name="stt_not_heard">Nisam te čuo.</string>
+    <string name="stt_busy">Google STT je zauzet.</string>
+    <string name="stt_server_unavailable">Google STT server nije dostupan.</string>
+    <string name="stt_no_speech">Nisam čuo govor.</string>
+    <string name="stt_error_code">Google STT greška (%1$d).</string>
+
+    <!-- Android TTS -->
+    <string name="tts_no_croatian_voice">Android TTS nema hrvatski glas</string>
+    <string name="tts_default_croatian_voice">Zadani hrvatski glas</string>
+    <string name="tts_croatian_voice_a">Hrvatski glas A</string>
+    <string name="tts_croatian_voice_b">Hrvatski glas B</string>
+    <string name="tts_network_suffix"> (mrežni)</string>
+    <string name="tts_local_suffix"> (lokalni)</string>
+
+    <!-- REST errors -->
+    <string name="invalid_server_url">Neispravna adresa servera: %1$s</string>
+    <string name="api_token_expired">API token je istekao ili nije valjan. Generiraj novi na Macu.</string>
+    <string name="session_expired">Sesija je istekla. Upiši lozinku ponovno.</string>
+    <string name="login_failed">Prijava nije uspjela</string>
+    <string name="no_ws_ticket">Server nije vratio WS ticket</string>
+    <string name="no_audio">Server nije vratio audio</string>
+    <string name="invalid_server_response">Neispravan odgovor servera</string>
+    <string name="login_failed_401">Prijava nije uspjela (401)</string>
+    <string name="access_denied_403">Cloudflare Access je odbio zahtjev (403). Provjeri service token.</string>
+    <string name="too_many_attempts">Previše pokušaja prijave. Pričekaj minutu.</string>
+    <string name="http_error">HTTP %1$d</string>
+</resources>

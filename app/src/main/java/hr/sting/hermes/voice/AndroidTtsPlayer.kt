@@ -6,6 +6,7 @@ import android.os.Handler
 import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import hr.sting.hermes.R
 import hr.sting.hermes.data.TtsVoiceOption
 import hr.sting.hermes.util.AppLog
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -79,7 +80,7 @@ class AndroidTtsPlayer(context: Context) {
         this.onDone = onDone
         this.onError = onError
         if (ready && !available) {
-            fail("Android TTS nema hrvatski glas")
+            fail(appContext.getString(R.string.android_tts_no_croatian))
         }
     }
 
@@ -137,14 +138,24 @@ class AndroidTtsPlayer(context: Context) {
             ?: emptyList()
         _voices.value = croatian.map { voice ->
             val shortName = when {
-                voice.name == "hr-HR-language" -> "Zadani hrvatski glas"
-                voice.name.contains("x-hra", ignoreCase = true) -> "Hrvatski glas A"
-                voice.name.contains("x-hrb", ignoreCase = true) -> "Hrvatski glas B"
+                voice.name == "hr-HR-language" ->
+                    appContext.getString(R.string.tts_default_croatian_voice)
+
+                voice.name.contains("x-hra", ignoreCase = true) ->
+                    appContext.getString(R.string.tts_croatian_voice_a)
+
+                voice.name.contains("x-hrb", ignoreCase = true) ->
+                    appContext.getString(R.string.tts_croatian_voice_b)
+
                 else -> voice.name
             }
             TtsVoiceOption(
                 id = voice.name,
-                label = shortName + if (voice.isNetworkConnectionRequired) " (mrežni)" else " (lokalni)",
+                label = shortName + if (voice.isNetworkConnectionRequired) {
+                    appContext.getString(R.string.tts_network_suffix)
+                } else {
+                    appContext.getString(R.string.tts_local_suffix)
+                },
                 network = voice.isNetworkConnectionRequired,
             )
         }
@@ -208,12 +219,12 @@ class AndroidTtsPlayer(context: Context) {
                 lastTts = if (available) {
                     "android ready (${tts.voice?.name ?: "hr-HR"})"
                 } else {
-                    "failed: android nema hr-HR"
+                    "failed: " + appContext.getString(R.string.tts_no_croatian_voice)
                 },
             )
         }
         if (!available) {
-            fail("Android TTS nema hrvatski glas")
+            fail(appContext.getString(R.string.android_tts_no_croatian))
             return
         }
         AppLog.add("android tts ready: ${tts.voice?.name ?: "default"}")

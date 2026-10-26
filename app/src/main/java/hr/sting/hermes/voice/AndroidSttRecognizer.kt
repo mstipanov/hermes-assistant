@@ -9,6 +9,7 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import hr.sting.hermes.R
 
 /**
  * Thin wrapper around Android's SpeechRecognizer — the same Google recognition
@@ -45,7 +46,9 @@ class AndroidSttRecognizer(private val context: Context) {
             val engine = runCatching { SpeechRecognizer.createSpeechRecognizer(context) }
                 .getOrElse {
                     active = false
-                    listener?.onFatalError("SpeechRecognizer nije dostupan: ${it.message}")
+                    listener?.onFatalError(
+                        context.getString(R.string.stt_unavailable, it.message),
+                    )
                     return@post
                 }
             recognizer = engine
@@ -67,7 +70,9 @@ class AndroidSttRecognizer(private val context: Context) {
                     active = false
                     runCatching { engine.destroy() }
                     recognizer = null
-                    listener?.onFatalError("Mikrofon za Google STT nije dostupan: ${it.message}")
+                    listener?.onFatalError(
+                        context.getString(R.string.stt_mic_unavailable, it.message),
+                    )
                 }
             Log.i(TAG, "Google STT listening ($language)")
         }
@@ -149,16 +154,18 @@ class AndroidSttRecognizer(private val context: Context) {
     }
 
     private fun errorMessage(code: Int): String = when (code) {
-        SpeechRecognizer.ERROR_AUDIO -> "Greška mikrofona (Google STT)."
-        SpeechRecognizer.ERROR_CLIENT -> "Google STT klijent je odbio zahtjev."
-        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Nema dozvole za mikrofon."
-        SpeechRecognizer.ERROR_NETWORK -> "Google STT nema mrežu."
-        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Google STT mreža je istekla."
-        SpeechRecognizer.ERROR_NO_MATCH -> "Nisam te čuo."
-        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Google STT je zauzet."
-        SpeechRecognizer.ERROR_SERVER -> "Google STT server nije dostupan."
-        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Nisam čuo govor."
-        else -> "Google STT greška ($code)."
+        SpeechRecognizer.ERROR_AUDIO -> context.getString(R.string.stt_mic_error)
+        SpeechRecognizer.ERROR_CLIENT -> context.getString(R.string.stt_client_rejected)
+        SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS ->
+            context.getString(R.string.stt_no_mic_permission)
+
+        SpeechRecognizer.ERROR_NETWORK -> context.getString(R.string.stt_no_network)
+        SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> context.getString(R.string.stt_network_timeout)
+        SpeechRecognizer.ERROR_NO_MATCH -> context.getString(R.string.stt_not_heard)
+        SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> context.getString(R.string.stt_busy)
+        SpeechRecognizer.ERROR_SERVER -> context.getString(R.string.stt_server_unavailable)
+        SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> context.getString(R.string.stt_no_speech)
+        else -> context.getString(R.string.stt_error_code, code)
     }
 
     private companion object {

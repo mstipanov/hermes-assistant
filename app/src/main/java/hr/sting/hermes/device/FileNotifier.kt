@@ -18,7 +18,6 @@ import hr.sting.hermes.R
 /** "Datoteka je stigla" notification so a file is noticed even off-screen. */
 object FileNotifier {
     private const val CHANNEL_ID = "hermes-files"
-    private const val CHANNEL_NAME = "Primljene datoteke"
 
     fun notify(context: Context, file: SavedFile) {
         if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
@@ -31,14 +30,14 @@ object FileNotifier {
             manager.createNotificationChannel(
                 NotificationChannel(
                     CHANNEL_ID,
-                    CHANNEL_NAME,
+                    context.getString(R.string.files_channel_name),
                     NotificationManager.IMPORTANCE_DEFAULT,
                 ),
             )
         }
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher)
-            .setContentTitle("Datoteka primljena")
+            .setContentTitle(context.getString(R.string.file_received_title))
             .setContentText(file.name)
             .setStyle(NotificationCompat.BigTextStyle().bigText("${file.name}\n${file.location}"))
             .setContentIntent(contentIntent(context, file))

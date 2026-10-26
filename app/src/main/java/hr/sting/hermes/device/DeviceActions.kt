@@ -12,6 +12,7 @@ import android.provider.ContactsContract
 import android.provider.MediaStore
 import android.view.KeyEvent
 import androidx.core.content.ContextCompat
+import hr.sting.hermes.R
 import hr.sting.hermes.data.bool
 import hr.sting.hermes.data.int
 import hr.sting.hermes.data.jsonObject
@@ -47,7 +48,7 @@ object DeviceActions {
                 "open_url" -> openUrl(context, params)
                 "set_alarm" -> setAlarm(context, params)
                 "send_sms" -> sendSms(context, params)
-                else -> errorResult("Nepoznata akcija: $action")
+                else -> errorResult(context.getString(R.string.unknown_action, action))
             }
         } catch (error: Exception) {
             AppLog.add("device.action $action failed: ${error.message}")
@@ -57,7 +58,7 @@ object DeviceActions {
 
     private fun launchApp(context: Context, params: JsonObject): JsonObject {
         val query = (params.str("app_name").ifBlank { params.str("query") }).trim()
-        if (query.isBlank()) return errorResult("Nedostaje ime aplikacije")
+        if (query.isBlank()) return errorResult(context.getString(R.string.missing_app_name))
         val apps = installedApps(context)
         val normalized = normalize(query)
         val exact = apps.firstOrNull {
@@ -71,18 +72,18 @@ object DeviceActions {
             if (partial.size > 1) {
                 return jsonObject(
                     "ok" to false,
-                    "error" to "Pronađeno je više aplikacija. Reci točnije ime.",
+                    "error" to context.getString(R.string.multiple_apps),
                     "candidates" to JsonArray(partial.take(8).map { JsonPrimitive(it.label) }),
                 )
             }
             return jsonObject(
                 "ok" to false,
-                "error" to "Nisam našao aplikaciju '$query'.",
+                "error" to context.getString(R.string.app_not_found, query),
                 "candidates" to JsonArray(apps.take(12).map { JsonPrimitive(it.label) }),
             )
         }
         val intent = context.packageManager.getLaunchIntentForPackage(target.packageName)
-            ?: return errorResult("Aplikacija ${target.label} nema pokretačku aktivnost")
+            ?: return errorResult(context.getString(R.string.app_no_launcher, target.label))
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         context.startActivity(intent)
         return jsonObject(
@@ -113,7 +114,7 @@ object DeviceActions {
 
     private fun playMusic(context: Context, params: JsonObject): JsonObject {
         val query = params.str("query").trim().ifBlank { params.str("song").trim() }
-        if (query.isBlank()) return errorResult("Nedostaje naziv pjesme/izvođača")
+        if (query.isBlank()) return errorResult(context.getString(R.string.missing_song))
         val encoded = URLEncoder.encode(query, "UTF-8")
 
         val playIntent = Intent(MediaStore.INTENT_ACTION_MEDIA_PLAY_FROM_SEARCH)
@@ -126,7 +127,7 @@ object DeviceActions {
                 "action" to "play_music",
                 "query" to query,
                 "mode" to "media_search",
-                "message" to "Zatražio sam od zadane glazbene aplikacije da pusti '$query'.",
+                "message" to context.getString(R.string.music_requested, query),
             )
         }
 
@@ -141,7 +142,7 @@ object DeviceActions {
                 "action" to "play_music",
                 "query" to query,
                 "mode" to "spotify_search",
-                "message" to "Otvara Spotify pretragu za '$query'.",
+                "message" to context.getString(R.string.spotify_search, query),
             )
         }
 
@@ -155,7 +156,7 @@ object DeviceActions {
             "action" to "play_music",
             "query" to query,
             "mode" to "youtube_music_search",
-            "message" to "Otvara YouTube Music pretragu za '$query'.",
+            "message" to context.getString(R.string.youtube_search, query),
         )
     }
 
@@ -168,16 +169,21 @@ object DeviceActions {
             "next" -> KeyEvent.KEYCODE_MEDIA_NEXT
             "previous", "prev" -> KeyEvent.KEYCODE_MEDIA_PREVIOUS
             "stop" -> KeyEvent.KEYCODE_MEDIA_STOP
-            else -> return errorResult("Nepoznata media komanda: $command")
+            else -> return errorResult(context.getString(R.string.unknown_media_command, command))
         }
         val audio = context.getSystemService(AudioManager::class.java)
-            ?: return errorResult("AudioManager nije dostupan")
+            ?: return errorResult(context.getString(R.string.audio_manager_unavailable))
         return try {
             audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_DOWN, keyCode))
             audio.dispatchMediaKeyEvent(KeyEvent(KeyEvent.ACTION_UP, keyCode))
             jsonObject("ok" to true, "action" to "media_control", "command" to command)
         } catch (error: Exception) {
-            errorResult("Media kontrola nije dopuštena: ${error.message}")
+            errorResult(
+                context.getString(
+                    R.string.media_control_not_allowed,
+                    error.message ?: error.javaClass.simpleName,
+                ),
+            )
         }
     }
 
@@ -186,19 +192,24 @@ object DeviceActions {
         var contactName = params.str("contact_name").trim()
         val direct = params.bool("direct")
         if (number.isBlank()) {
-            if (contactName.isBlank()) return errorResult("Nedostaje ime kontakta ili broj")
+            if (contactName.isBlank()) {
+                return errorResult(context.getString(R.string.missing_contact_or_number))
+            }
             if (!hasPermission(context, Manifest.permission.READ_CONTACTS)) {
                 return needPermission(
+                    context,
                     "READ_CONTACTS",
-                    "Za pronalaženje kontakta treba dozvola za kontakte.",
+                    context.getString(R.string.contacts_permission_needed),
                 )
             }
             val matches = findContacts(context, contactName)
-            if (matches.isEmpty()) return errorResult("Nisam našao kontakt '$contactName'.")
+            if (matches.isEmpty()) {
+                return errorResult(context.getString(R.string.contact_not_found, contactName))
+            }
             if (matches.size > 1) {
                 return buildJsonObject {
                     put("ok", false)
-                    put("error", "Pronašao sam više kontakata. Reci punije ime.")
+                    put("error", context.getString(R.string.multiple_contacts))
                     put("candidates", buildJsonArray {
                         matches.take(8).forEach { match ->
                             add(buildJsonObject {
@@ -225,9 +236,9 @@ object DeviceActions {
             "number" to number,
             "mode" to if (canCall) "call" else "dial",
             "message" to if (canCall) {
-                "Pozivam $contactName."
+                context.getString(R.string.calling, contactName)
             } else {
-                "Otvarao sam dialer s brojem za $contactName — potvrdi poziv."
+                context.getString(R.string.dialer_with_number, contactName)
             },
         )
     }
@@ -261,7 +272,7 @@ object DeviceActions {
     private fun openUrl(context: Context, params: JsonObject): JsonObject {
         val raw = params.str("url").trim()
         if (!raw.startsWith("http://") && !raw.startsWith("https://")) {
-            return errorResult("Dopuštene su samo http/https adrese")
+            return errorResult(context.getString(R.string.only_http_urls))
         }
         context.startActivity(
             Intent(Intent.ACTION_VIEW, Uri.parse(raw)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
@@ -272,11 +283,14 @@ object DeviceActions {
     private fun setAlarm(context: Context, params: JsonObject): JsonObject {
         val raw = params.str("time").trim()
         val parts = raw.split(":")
-        if (parts.size < 2) return errorResult("Vrijeme mora biti u formatu HH:mm")
-        val hour = parts[0].toIntOrNull() ?: return errorResult("Neispravan sat")
-        val minute = parts[1].toIntOrNull() ?: return errorResult("Neispravna minuta")
-        if (hour !in 0..23 || minute !in 0..59) return errorResult("Neispravno vrijeme")
-        val label = params.str("label").ifBlank { "Hermes alarm" }
+        if (parts.size < 2) return errorResult(context.getString(R.string.time_format_hhmm))
+        val hour = parts[0].toIntOrNull() ?: return errorResult(context.getString(R.string.invalid_hour))
+        val minute = parts[1].toIntOrNull()
+            ?: return errorResult(context.getString(R.string.invalid_minute))
+        if (hour !in 0..23 || minute !in 0..59) {
+            return errorResult(context.getString(R.string.invalid_time))
+        }
+        val label = params.str("label").ifBlank { context.getString(R.string.default_alarm_label) }
         val intent = Intent(AlarmClock.ACTION_SET_ALARM)
             .putExtra(AlarmClock.EXTRA_HOUR, hour)
             .putExtra(AlarmClock.EXTRA_MINUTES, minute)
@@ -290,7 +304,7 @@ object DeviceActions {
             "action" to "set_alarm",
             "time" to formatted,
             "label" to label,
-            "message" to "Alarm je postavljen za $formatted.",
+            "message" to context.getString(R.string.alarm_set, formatted),
         )
     }
 
@@ -300,20 +314,28 @@ object DeviceActions {
         val body = params.str("message").trim()
         if (number.isBlank() && name.isNotBlank()) {
             if (!hasPermission(context, Manifest.permission.READ_CONTACTS)) {
-                return needPermission("READ_CONTACTS", "Za kontakt treba dozvola za kontakte.")
+                return needPermission(
+                    context,
+                    "READ_CONTACTS",
+                    context.getString(R.string.contacts_permission_needed_short),
+                )
             }
             val matches = findContacts(context, name)
-            if (matches.isEmpty()) return errorResult("Nisam našao kontakt '$name'.")
+            if (matches.isEmpty()) {
+                return errorResult(context.getString(R.string.contact_not_found, name))
+            }
             if (matches.size > 1) {
                 return jsonObject(
                     "ok" to false,
-                    "error" to "Pronašao sam više kontakata. Reci punije ime.",
+                    "error" to context.getString(R.string.multiple_contacts),
                     "candidates" to JsonArray(matches.take(8).map { JsonPrimitive(it.first) }),
                 )
             }
             number = matches.first().second
         }
-        if (number.isBlank()) return errorResult("Nedostaje broj ili kontakt")
+        if (number.isBlank()) {
+            return errorResult(context.getString(R.string.missing_contact_or_number))
+        }
         val intent = Intent(Intent.ACTION_SENDTO, Uri.parse("smsto:${Uri.encode(number)}"))
             .putExtra("sms_body", body)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -322,7 +344,7 @@ object DeviceActions {
             "ok" to true,
             "action" to "send_sms",
             "number" to number,
-            "message" to "Otvarao sam SMS poruku — potvrdi slanje.",
+            "message" to context.getString(R.string.sms_opened),
         )
     }
 
@@ -344,11 +366,15 @@ object DeviceActions {
     private fun hasPermission(context: Context, permission: String): Boolean =
         ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED
 
-    private fun needPermission(permission: String, message: String): JsonObject = jsonObject(
+    private fun needPermission(
+        context: Context,
+        permission: String,
+        message: String,
+    ): JsonObject = jsonObject(
         "ok" to false,
         "error" to message,
         "need_permission" to permission,
-        "hint" to "Otvori Hermes → Postavke → Dozvole za akcije i dopusti pristup.",
+        "hint" to context.getString(R.string.permission_hint),
     )
 
     private fun errorResult(message: String): JsonObject = jsonObject(

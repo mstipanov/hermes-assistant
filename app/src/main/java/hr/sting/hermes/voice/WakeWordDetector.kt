@@ -9,6 +9,7 @@ import com.k2fsa.sherpa.onnx.OnlineModelConfig
 import com.k2fsa.sherpa.onnx.OnlineStream
 import com.k2fsa.sherpa.onnx.OnlineTransducerModelConfig
 import com.k2fsa.sherpa.onnx.QnnConfig
+import hr.sting.hermes.R
 
 /**
  * Offline open-vocabulary keyword spotting (sherpa-onnx zipformer KWS).
@@ -43,7 +44,9 @@ class WakeWordDetector(private val context: Context) {
             }
             spotter = KeywordSpotter(context.assets, config)
             stream = spotter?.createStream("")
-            if (spotter == null || stream == null) error("KeywordSpotter nije stvorio stream")
+            if (spotter == null || stream == null) {
+                error(context.getString(R.string.kws_no_stream))
+            }
             VoiceDiagnostics.update {
                 it.copy(kwsReady = true, lastError = null)
             }

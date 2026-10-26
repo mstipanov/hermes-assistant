@@ -1,6 +1,8 @@
 package hr.sting.hermes.data
 
+import android.content.Context
 import android.util.Base64
+import hr.sting.hermes.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.JsonObject
@@ -41,10 +43,13 @@ class MemoryCookieJar : CookieJar {
  * HTTP side of the Hermes dashboard API: Access service token headers, the
  * dashboard password session (cookies), file/audio uploads and WS tickets.
  */
-class HermesRest(val settings: AppSettings) {
+class HermesRest(context: Context, val settings: AppSettings) {
+    private val appContext = context.applicationContext
     private val base = settings.serverUrl.trim().trimEnd('/')
     private val baseUrl = base.toHttpUrlOrNull()
-        ?: throw IllegalArgumentException("Neispravna adresa servera: $base")
+        ?: throw IllegalArgumentException(
+            appContext.getString(R.string.invalid_server_url, base),
+        )
     val cookieJar = MemoryCookieJar()
 
     val client: OkHttpClient = OkHttpClient.Builder()
@@ -142,21 +147,23 @@ class HermesRest(val settings: AppSettings) {
         val err = probe.exceptionOrNull()
         if (err is ApiError && err.code == 401) {
             if (settings.apiToken.isNotBlank()) {
-                throw ApiError(401, "API token je istekao ili nije valjan. Generiraj novi na Macu.")
+                throw ApiError(401, appContext.getString(R.string.api_token_expired))
             }
             if (settings.password.isBlank()) {
-                throw ApiError(401, "Sesija je istekla. Upiši lozinku ponovno.")
+                throw ApiError(401, appContext.getString(R.string.session_expired))
             }
             login()
             me()
             return
         }
-        throw err ?: IllegalStateException("Prijava nije uspjela")
+        throw err ?: IllegalStateException(appContext.getString(R.string.login_failed))
     }
 
     suspend fun wsTicket(): String = withContext(Dispatchers.IO) {
         val result = postJson("/api/auth/ws-ticket", jsonObject())
-        result.str("ticket").ifBlank { throw ApiError(0, "Server nije vratio WS ticket") }
+        result.str("ticket").ifBlank {
+            throw ApiError(0, appContext.getString(R.string.no_ws_ticket))
+        }
     }
 
     suspend fun transcribe(wav: ByteArray): String = withContext(Dispatchers.IO) {
@@ -172,7 +179,7 @@ class HermesRest(val settings: AppSettings) {
         val result = postJson("/api/audio/speak", jsonObject("text" to text))
         val dataUrl = result.str("data_url")
         val encoded = dataUrl.substringAfter(',', "")
-        if (encoded.isBlank()) throw ApiError(0, "Server nije vratio audio")
+        if (encoded.isBlank()) throw ApiError(0, appContext.getString(R.string.no_audio))
         Base64.decode(encoded, Base64.NO_WRAP)
     }
 
@@ -200,7 +207,12 @@ class HermesRest(val settings: AppSettings) {
             }
             if (text.isBlank()) return JsonObject(emptyMap())
             return runCatching { HermesJson.parseToJsonElement(text).let { it as JsonObject } }
-                .getOrElse { throw ApiError(response.code, "Neispravan odgovor servera") }
+                .getOrElse {
+                    throw ApiError(
+                        response.code,
+                        appContext.getString(R.string.invalid_server_response),
+                    )
+                }
         }
     }
 
@@ -214,10 +226,10 @@ class HermesRest(val settings: AppSettings) {
         }.getOrNull()
         return when {
             !detail.isNullOrBlank() -> detail
-            code == 401 -> "Prijava nije uspjela (401)"
-            code == 403 -> "Cloudflare Access je odbio zahtjev (403). Provjeri service token."
-            code == 429 -> "Previše pokušaja prijave. Pričekaj minutu."
-            else -> "HTTP $code"
+            code == 401 -> appContext.getString(R.string.login_failed_401)
+            code == 403 -> appContext.getString(R.string.access_denied_403)
+            code == 429 -> appContext.getString(R.string.too_many_attempts)
+            else -> appContext.getString(R.string.http_error, code)
         }
     }
 }

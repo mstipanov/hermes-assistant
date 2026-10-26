@@ -7,6 +7,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import androidx.core.content.FileProvider
+import hr.sting.hermes.R
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
@@ -52,9 +53,10 @@ object FileInbox {
     ): SavedFile = withContext(Dispatchers.IO) {
         val request = Request.Builder().url(url).get().build()
         client.newCall(request).execute().use { response ->
-            if (!response.isSuccessful) throw IOException(httpError(response.code))
-            val body = response.body ?: throw IOException("Server nije vratio datoteku.")
-            val name = safeName(incoming.name)
+            if (!response.isSuccessful) throw IOException(httpError(context, response.code))
+            val body = response.body
+                ?: throw IOException(context.getString(R.string.server_returned_no_file))
+            val name = safeName(context, incoming.name)
             val mime = incoming.mimeType.ifBlank { "application/octet-stream" }
             body.byteStream().use { input ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -85,8 +87,8 @@ object FileInbox {
         var written = 0L
         try {
             resolver.openOutputStream(uri)?.use { output ->
-                written = copy(input, output)
-            } ?: throw IOException("Datoteku nije moguće spremiti.")
+                written = copy(context, input, output)
+            } ?: throw IOException(context.getString(R.string.cannot_save_file))
             resolver.update(
                 uri,
                 ContentValues().apply { put(MediaStore.Downloads.IS_PENDING, 0) },
@@ -117,7 +119,7 @@ object FileInbox {
         ).apply { mkdirs() }
         val target = uniqueFile(dir, name)
         val written = try {
-            target.outputStream().use { copy(input, it) }
+            target.outputStream().use { copy(context, input, it) }
         } catch (error: Exception) {
             runCatching { target.delete() }
             throw error
@@ -148,7 +150,7 @@ object FileInbox {
         return candidate
     }
 
-    private fun copy(input: InputStream, output: OutputStream): Long {
+    private fun copy(context: Context, input: InputStream, output: OutputStream): Long {
         val buffer = ByteArray(64 * 1024)
         var total = 0L
         while (true) {
@@ -156,7 +158,7 @@ object FileInbox {
             if (read <= 0) break
             total += read
             if (total > MAX_DOWNLOAD_BYTES) {
-                throw IOException("Datoteka je veća od 200 MB.")
+                throw IOException(context.getString(R.string.file_too_large_200))
             }
             output.write(buffer, 0, read)
         }
@@ -165,20 +167,20 @@ object FileInbox {
     }
 
     /** Never let a server-supplied name escape the target folder. */
-    private fun safeName(raw: String): String {
+    private fun safeName(context: Context, raw: String): String {
         val cleaned = raw
             .substringAfterLast('/')
             .substringAfterLast('\\')
             .replace("\u0000", "")
             .trim()
             .trimStart('.')
-        return cleaned.ifBlank { "datoteka" }.take(120)
+        return cleaned.ifBlank { context.getString(R.string.file) }.take(120)
     }
 
-    private fun httpError(code: Int): String = when (code) {
-        403 -> "Server ne dopušta pristup datoteci."
-        404 -> "Datoteka više ne postoji na serveru."
-        413 -> "Datoteka je prevelika za prijenos."
-        else -> "Preuzimanje nije uspjelo (HTTP $code)."
+    private fun httpError(context: Context, code: Int): String = when (code) {
+        403 -> context.getString(R.string.access_denied)
+        404 -> context.getString(R.string.file_no_longer_exists)
+        413 -> context.getString(R.string.file_too_large_transfer)
+        else -> context.getString(R.string.download_failed_http, code)
     }
 }

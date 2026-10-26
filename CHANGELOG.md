@@ -1,5 +1,10 @@
 # Hermes Assistant
 
+## 0.45
+- English and Croatian user interface. The app follows the system language; English is the default for all other languages.
+- Android 13+ shows a per-app language picker under Settings → Apps → Hermes → Language.
+- All visible text moved to Android string resources. Technical RPC log lines stay in English.
+
 ## 0.44
 - Device actions (call, SMS, alarm, opening a link, launching an app, music) now require confirmation in the app. Can be disabled in Settings → Action permissions.
 - Files are downloaded only from your own Hermes server; the API token and Cloudflare Access secret can no longer be sent to another host.

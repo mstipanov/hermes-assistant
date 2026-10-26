@@ -33,9 +33,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.FileProvider
+import hr.sting.hermes.R
 import hr.sting.hermes.data.AttachmentKind
 import hr.sting.hermes.data.PendingAttachment
 import kotlinx.coroutines.Dispatchers
@@ -79,14 +81,14 @@ suspend fun readAttachment(
         }
     }
     if (declaredSize > MAX_INPUT_ATTACHMENT_BYTES) {
-        throw IllegalStateException("Datoteka je prevelika (max 8 MB).")
+        throw IllegalStateException(context.getString(R.string.attachment_too_large))
     }
     val mime = resolver.getType(uri) ?: mimeFromName(name)
     val bytes = resolver.openInputStream(uri)?.use { it.readBytes() }
-        ?: throw IllegalStateException("Datoteku nije moguće pročitati.")
-    if (bytes.isEmpty()) throw IllegalStateException("Datoteka je prazna.")
+        ?: throw IllegalStateException(context.getString(R.string.attachment_unreadable))
+    if (bytes.isEmpty()) throw IllegalStateException(context.getString(R.string.attachment_empty))
     if (bytes.size > MAX_INPUT_ATTACHMENT_BYTES) {
-        throw IllegalStateException("Datoteka je prevelika (max 8 MB).")
+        throw IllegalStateException(context.getString(R.string.attachment_too_large))
     }
     when {
         mime.startsWith("image/") -> processImage(bytes, name, mime)
@@ -226,7 +228,7 @@ fun AttachmentStrip(
                     IconButton(onClick = { onRemove(attachment.id) }) {
                         Icon(
                             Icons.Filled.Close,
-                            contentDescription = "Ukloni prilog",
+                            contentDescription = stringResource(R.string.remove_attachment),
                             modifier = Modifier.size(16.dp),
                         )
                     }

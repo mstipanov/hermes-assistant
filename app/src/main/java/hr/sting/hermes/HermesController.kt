@@ -52,6 +52,7 @@ import hr.sting.hermes.device.IncomingFile
 import hr.sting.hermes.voice.AudioRecorder
 import androidx.core.content.ContextCompat
 import hr.sting.hermes.voice.AndroidSttRecognizer
+import hr.sting.hermes.R
 import hr.sting.hermes.voice.HermesService
 import hr.sting.hermes.voice.AndroidTtsPlayer
 import hr.sting.hermes.voice.SpeechText
@@ -88,7 +89,7 @@ import java.util.UUID
 class HermesController(private val app: Application) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private val settingsStore = SettingsStore(app)
-    private val recorder = AudioRecorder()
+    private val recorder = AudioRecorder(app)
     private val tts = TtsPlayer(app)
     private val androidTts = AndroidTtsPlayer(app)
     private val androidStt = AndroidSttRecognizer(app)
@@ -163,7 +164,7 @@ class HermesController(private val app: Application) {
                     it.copy(
                         voiceState = "idle",
                         partialTranscript = "",
-                        notice = "Nisam te čuo. Pokušaj ponovno.",
+                        notice = app.getString(R.string.did_not_hear),
                     )
                 }
             }
@@ -172,7 +173,7 @@ class HermesController(private val app: Application) {
                 VoiceDiagnostics.update { it.copy(lastStt = "google error: $message") }
                 _ui.update {
                     it.copy(
-                        notice = "$message Prelazim na Hermes STT — ponovi pitanje.",
+                        notice = app.getString(R.string.switching_to_hermes_stt, message),
                         partialTranscript = "",
                     )
                 }
@@ -232,12 +233,12 @@ class HermesController(private val app: Application) {
             }
             try {
                 AppLog.add("connect: ${settings.serverUrl}")
-                val newRest = HermesRest(settings)
+                val newRest = HermesRest(app, settings)
                 newRest.ensureAuthenticated()
                 AppLog.add("auth ok")
                 val me = newRest.me()
                 rest = newRest
-                val newRpc = HermesRpc(newRest, scope)
+                val newRpc = HermesRpc(newRest, app, scope)
                 rpc = newRpc
                 observeRpc(newRpc)
                 newRpc.start()
@@ -395,7 +396,14 @@ class HermesController(private val app: Application) {
                 applySessionMeta(fresh, fallbackStoredId = stored, fallbackTitle = row.title)
                 _ui.update {
                     it.copy(
-                        notice = "Osvježena je povijest iz Telegrama ($dbCount poruka).",
+                        notice = app.getString(
+                            R.string.telegram_history_refreshed,
+                            app.resources.getQuantityString(
+                                R.plurals.message_count,
+                                dbCount,
+                                dbCount,
+                            ),
+                        ),
                     )
                 }
                 lastKnownHistoryCount = fresh.int("message_count", dbCount)
@@ -403,7 +411,14 @@ class HermesController(private val app: Application) {
                 lastKnownHistoryCount = dbCount
             }
         } catch (error: Exception) {
-            _ui.update { it.copy(notice = "Sesija s Telegramom nije osvježena: ${humanError(error)}") }
+            _ui.update {
+                it.copy(
+                    notice = app.getString(
+                        R.string.telegram_history_failed,
+                        humanError(error),
+                    ),
+                )
+            }
         } finally {
             syncingHistory = false
         }
@@ -601,7 +616,7 @@ class HermesController(private val app: Application) {
                 !(message.role == MessageRole.SYSTEM && message.text.isBlank())
             }
         val title = info.str("title").ifBlank {
-            fallbackTitle?.takeIf { it.isNotBlank() } ?: "Novi razgovor"
+            fallbackTitle?.takeIf { it.isNotBlank() } ?: app.getString(R.string.new_chat)
         }
         val model = info.str("model")
         val running = info.bool("running") || result.bool("running")
@@ -620,7 +635,14 @@ class HermesController(private val app: Application) {
                 approval = null,
                 clarify = null,
                 notice = if (sharedEmpty) {
-                    "Nastavljaš Telegram razgovor — u povijesti je $lastKnownHistoryCount poruka."
+                    app.getString(
+                        R.string.telegram_continues,
+                        app.resources.getQuantityString(
+                            R.plurals.message_count,
+                            lastKnownHistoryCount,
+                            lastKnownHistoryCount,
+                        ),
+                    )
                 } else {
                     it.notice
                 },
@@ -641,7 +663,7 @@ class HermesController(private val app: Application) {
                 it.copy(
                     currentRuntimeId = null,
                     currentStoredId = null,
-                    title = "Novi razgovor",
+                    title = app.getString(R.string.new_chat),
                     messages = emptyList(),
                     running = false,
                     approval = null,
@@ -685,7 +707,9 @@ class HermesController(private val app: Application) {
         awaitingAutoListen = false
         autoListenJob?.cancel()
         if (_ui.value.running) {
-            _ui.update { it.copy(notice = "Hermes još odgovara. Zaustavi ga prije novog pitanja.") }
+            _ui.update {
+                it.copy(notice = app.getString(R.string.hermes_still_answering))
+            }
             return
         }
         if (_ui.value.voiceState == "speaking") {
@@ -698,7 +722,7 @@ class HermesController(private val app: Application) {
         }
         if (rpc?.isReady() != true) {
             _ui.update {
-                it.copy(error = "Nisam povezan s Hermesom. Provjeri Postavke → Testiraj vezu.")
+                it.copy(error = app.getString(R.string.not_connected_check_settings))
             }
             return
         }
@@ -706,7 +730,7 @@ class HermesController(private val app: Application) {
             PackageManager.PERMISSION_GRANTED
         ) {
             _ui.update {
-                it.copy(error = "Dozvoli mikrofon u Postavkama → Dozvole za akcije.")
+                it.copy(error = app.getString(R.string.allow_mic_in_settings))
             }
             return
         }
@@ -728,7 +752,7 @@ class HermesController(private val app: Application) {
             if (_ui.value.voiceState != "listening") return@launch
             if (!androidStt.start("hr-HR")) {
                 _ui.update {
-                    it.copy(notice = "Google STT nije dostupan; koristim Hermes STT.")
+                    it.copy(notice = app.getString(R.string.google_stt_unavailable))
                 }
                 startVoiceServer()
             }
@@ -750,7 +774,10 @@ class HermesController(private val app: Application) {
                 val transcript = client.transcribe(wav).trim()
                 if (transcript.isBlank()) {
                     _ui.update {
-                        it.copy(voiceState = "idle", notice = "Nisam te čuo. Pokušaj ponovno.")
+                        it.copy(
+                            voiceState = "idle",
+                            notice = app.getString(R.string.did_not_hear),
+                        )
                     }
                     return@launch
                 }
@@ -780,7 +807,9 @@ class HermesController(private val app: Application) {
         val clean = SpeechText.sanitize(text)
         if (clean.isBlank()) return
         if (!_ui.value.settings.ttsEnabled) {
-            _ui.update { it.copy(notice = "Glasovni odgovori su isključeni u Postavkama.") }
+            _ui.update {
+                it.copy(notice = app.getString(R.string.voice_replies_disabled))
+            }
             return
         }
         AppLog.add("tts manual: ${clean.length} chars")
@@ -804,7 +833,7 @@ class HermesController(private val app: Application) {
         _ui.update { it.copy(voiceState = "speaking") }
     }
 
-    fun testTts() = speakText("Bok, ovo je test Hermesovog glasa. Ako ovo čuješ, glas radi.")
+    fun testTts() = speakText(app.getString(R.string.tts_test_text))
 
     /**
      * Android's own engine can start speaking before the first sentence has
@@ -817,7 +846,7 @@ class HermesController(private val app: Application) {
         if (androidTts.isReady && !androidTts.isAvailable) {
             androidTtsFailed = true
             _ui.update {
-                it.copy(notice = "Android TTS nema hrvatski glas — koristim Hermesov glas.")
+                it.copy(notice = app.getString(R.string.android_tts_no_croatian))
             }
             return false
         }
@@ -856,7 +885,7 @@ class HermesController(private val app: Application) {
         AppLog.add("android tts failed: $message -> Hermes fallback")
         if (message.contains("hrvatski", ignoreCase = true)) {
             _ui.update {
-                it.copy(notice = "Android TTS nema hrvatski glas — koristim Hermesov glas.")
+                it.copy(notice = app.getString(R.string.android_tts_no_croatian))
             }
         }
         androidTts.stop()
@@ -997,12 +1026,17 @@ class HermesController(private val app: Application) {
 
     fun addAttachment(attachment: PendingAttachment) {
         if (attachment.bytes.isEmpty()) {
-            _ui.update { it.copy(error = "Prilog je prazan.") }
+            _ui.update { it.copy(error = app.getString(R.string.attachment_empty_error)) }
             return
         }
         if (attachment.bytes.size > MAX_ATTACHMENT_BYTES) {
             _ui.update {
-                it.copy(error = "Prilog je prevelik (max ${MAX_ATTACHMENT_BYTES / (1024 * 1024)} MB).")
+                it.copy(
+                    error = app.getString(
+                        R.string.attachment_too_large_error,
+                        MAX_ATTACHMENT_BYTES / (1024 * 1024),
+                    ),
+                )
             }
             return
         }
@@ -1024,11 +1058,15 @@ class HermesController(private val app: Application) {
     }
 
     private suspend fun uploadAttachments(sid: String, attachments: List<PendingAttachment>): List<String> {
-        val client = rpc ?: throw RpcError(0, "Veza sa serverom nije otvorena")
+        val client = rpc
+            ?: throw RpcError(0, app.getString(R.string.server_connection_not_open))
         val fileRefs = mutableListOf<String>()
         for (attachment in attachments) {
             if (attachment.bytes.size > MAX_ATTACHMENT_BYTES) {
-                throw RpcError(0, "${attachment.name} je prevelik (max 8 MB).")
+                throw RpcError(
+                    0,
+                    app.getString(R.string.attachment_named_too_large, attachment.name),
+                )
             }
             val encoded = Base64.encodeToString(attachment.bytes, Base64.NO_WRAP)
             when (attachment.kind) {
@@ -1068,7 +1106,7 @@ class HermesController(private val app: Application) {
                     val ref = result.strOrNull("ref_text")
                     if (!path.isNullOrBlank()) {
                         fileRefs += buildString {
-                            append("Priložena datoteka: ").append(path)
+                            append(app.getString(R.string.attached_file_prefix)).append(path)
                             if (!ref.isNullOrBlank()) append(" (").append(ref).append(")")
                         }
                     }
@@ -1086,7 +1124,7 @@ class HermesController(private val app: Application) {
         awaitingAutoListen = fromVoice
         if (_ui.value.running) {
             _ui.update {
-                it.copy(notice = "Hermes još odgovara. Pričekaj odgovor ili pritisni Stop.")
+                it.copy(notice = app.getString(R.string.hermes_still_answering_stop))
             }
             return
         }
@@ -1094,7 +1132,7 @@ class HermesController(private val app: Application) {
         if (client == null || !client.isReady()) {
             _ui.update {
                 it.copy(
-                    error = "Nisam povezan s Hermesom. Provjeri Postavke → Testiraj vezu.",
+                    error = app.getString(R.string.not_connected_check_settings),
                 )
             }
             return
@@ -1109,7 +1147,7 @@ class HermesController(private val app: Application) {
         )
         if (fromVoice && !_ui.value.settings.ttsEnabled) {
             _ui.update {
-                it.copy(notice = "Glasovni odgovori su isključeni u Postavkama — odgovor je samo tekst.")
+                it.copy(notice = app.getString(R.string.voice_replies_disabled_text_only))
             }
         }
         scope.launch {
@@ -1118,7 +1156,7 @@ class HermesController(private val app: Application) {
                 if (_ui.value.settings.shareTelegramSession) syncSharedSession()
                 val sid = _ui.value.currentRuntimeId ?: return@launch
                 val fileRefs = if (attachments.isNotEmpty()) {
-                    _ui.update { it.copy(notice = "Šaljem priloge…") }
+                    _ui.update { it.copy(notice = app.getString(R.string.sending_attachments)) }
                     val refs = uploadAttachments(sid, attachments)
                     _ui.update { it.copy(pendingAttachments = emptyList(), notice = null) }
                     refs
@@ -1127,7 +1165,7 @@ class HermesController(private val app: Application) {
                 }
                 val displayText = buildString {
                     attachments.forEach { append("📎 ${it.name}\n") }
-                    append(trimmed.ifBlank { "Pogledaj priloge i reci mi što vidiš." })
+                    append(trimmed.ifBlank { app.getString(R.string.attachment_prompt) })
                 }
                 val promptText = buildString {
                     if (trimmed.isNotBlank()) append(trimmed)
@@ -1135,7 +1173,7 @@ class HermesController(private val app: Application) {
                         if (isNotEmpty()) append("\n\n")
                         append(ref)
                     }
-                    if (isEmpty()) append("Pogledaj priloge i reci mi što vidiš.")
+                    if (isEmpty()) append(app.getString(R.string.attachment_prompt))
                 }
                 val userMessage = ChatMessage(role = MessageRole.USER, text = displayText)
                 _ui.update {
@@ -1179,7 +1217,10 @@ class HermesController(private val app: Application) {
                         AppLog.add("prompt hit stale session, recovering once")
                         recoverSession()
                         val fresh = _ui.value.currentRuntimeId
-                            ?: throw RpcError(0, "Sesija se nije mogla obnoviti")
+                            ?: throw RpcError(
+                                0,
+                                app.getString(R.string.session_could_not_recover),
+                            )
                         client.call(
                             "prompt.submit",
                             jsonObject(
@@ -1296,7 +1337,7 @@ class HermesController(private val app: Application) {
             "error" -> {
                 val message = event.payload.strOrNull("message")
                     ?: event.payload.strOrNull("error")
-                    ?: "Hermes je prijavio grešku"
+                    ?: app.getString(R.string.hermes_reported_error)
                 awaitingAutoListen = false
                 autoListenJob?.cancel()
                 speakThisTurn = false
@@ -1425,7 +1466,9 @@ class HermesController(private val app: Application) {
                 state.copy(
                     messages = state.messages + ChatMessage(
                         role = MessageRole.TOOL,
-                        toolName = payload.str("name").ifBlank { "alat" },
+                        toolName = payload.str("name").ifBlank {
+                            app.getString(R.string.tool_default)
+                        },
                         toolResult = output,
                         toolDone = true,
                     ),
@@ -1451,7 +1494,7 @@ class HermesController(private val app: Application) {
                     it.copy(
                         running = false,
                         voiceState = "idle",
-                        error = "Nema odgovora od Hermesa nakon 35 s. Provjeri vezu ili pošalji ponovno.",
+                        error = app.getString(R.string.no_response_35s),
                     )
                 }
             }
@@ -1511,10 +1554,14 @@ class HermesController(private val app: Application) {
                 // Desktop-only bridges and secret/sudo prompts cannot be rendered
                 // here yet. Decline explicitly so the agent does not wait for a
                 // reply that will never come.
-                rpc?.respondError(request.id, 4404, "Mobilna aplikacija ne podržava ovaj upit")
+                rpc?.respondError(
+                    request.id,
+                    4404,
+                    app.getString(R.string.mobile_unsupported),
+                )
                 _ui.update {
                     it.copy(
-                        notice = "Hermes traži radnju dostupnu samo na desktopu (${request.method}).",
+                        notice = app.getString(R.string.desktop_only_action, request.method),
                     )
                 }
             }
@@ -1536,7 +1583,10 @@ class HermesController(private val app: Application) {
                 deviceConfirmJob?.cancel()
                 rpc?.respond(
                     pending.frameId,
-                    jsonObject("ok" to false, "error" to "Zamijenjeno novom akcijom."),
+                    jsonObject(
+                        "ok" to false,
+                        "error" to app.getString(R.string.replaced_by_new_action),
+                    ),
                 )
             }
             _ui.update {
@@ -1558,12 +1608,12 @@ class HermesController(private val app: Application) {
                         request.id,
                         jsonObject(
                             "ok" to false,
-                            "error" to "Korisnik nije potvrdio akciju na telefonu.",
+                            "error" to app.getString(R.string.user_did_not_confirm),
                         ),
                     )
                     state.copy(
                         deviceConfirm = null,
-                        notice = "Akcija na telefonu nije potvrđena (isteklo).",
+                        notice = app.getString(R.string.action_timed_out),
                     )
                 }
             }
@@ -1588,7 +1638,7 @@ class HermesController(private val app: Application) {
         if (!allow) {
             rpc?.respond(
                 prompt.frameId,
-                jsonObject("ok" to false, "error" to "Korisnik je odbio akciju na telefonu."),
+                jsonObject("ok" to false, "error" to app.getString(R.string.user_denied_action)),
             )
             return
         }
@@ -1609,16 +1659,20 @@ class HermesController(private val app: Application) {
             else -> ""
         }.trim()
         val label = when (action) {
-            "call_contact", "dial_number" -> "Poziv"
-            "send_sms" -> "SMS"
-            "open_url" -> "Otvaranje poveznice"
-            "set_alarm" -> "Alarm"
-            "launch_app" -> "Pokretanje aplikacije"
-            "play_music" -> "Glazba"
-            "media_control" -> "Media kontrola"
+            "call_contact", "dial_number" -> app.getString(R.string.device_action_call)
+            "send_sms" -> app.getString(R.string.device_action_sms)
+            "open_url" -> app.getString(R.string.device_action_open_link)
+            "set_alarm" -> app.getString(R.string.device_action_alarm)
+            "launch_app" -> app.getString(R.string.device_action_launch_app)
+            "play_music" -> app.getString(R.string.device_action_music)
+            "media_control" -> app.getString(R.string.device_action_media_control)
             else -> action
         }
-        return if (target.isBlank()) label else "$label: $target"
+        return if (target.isBlank()) {
+            label
+        } else {
+            app.getString(R.string.device_action_target, label, target)
+        }
     }
 
     // ── Server -> client files ─────────────────────────────────────────────
@@ -1634,7 +1688,9 @@ class HermesController(private val app: Application) {
         val downloadPath = params.str("download_path")
         val file = FileTransfer(
             name = params.str("name").ifBlank {
-                serverPath.substringAfterLast('/').ifBlank { "datoteka" }
+                serverPath.substringAfterLast('/').ifBlank {
+                    app.getString(R.string.file)
+                }
             },
             mimeType = params.str("mime").ifBlank { "application/octet-stream" },
             size = params.long("size"),
@@ -1646,7 +1702,10 @@ class HermesController(private val app: Application) {
         if (client == null || downloadPath.isBlank()) {
             rpc?.respond(
                 request.id,
-                jsonObject("ok" to false, "error" to "Veza sa serverom nije otvorena"),
+                jsonObject(
+                    "ok" to false,
+                    "error" to app.getString(R.string.server_connection_not_open),
+                ),
             )
             return
         }
@@ -1659,7 +1718,7 @@ class HermesController(private val app: Application) {
                     text = file.caption,
                     file = file,
                 ),
-                notice = "Hermes šalje datoteku: ${file.name}",
+                notice = app.getString(R.string.file_arriving, file.name),
             )
         }
         AppLog.add("file.send <- ${file.name} (${file.size} B)")
@@ -1687,7 +1746,7 @@ class HermesController(private val app: Application) {
             try {
                 val url = client.fileDownloadUrl(file.downloadPath)
                     ?: throw IllegalStateException(
-                        "Server je poslao adresu datoteke izvan svoje domene.",
+                        app.getString(R.string.file_outside_origin),
                     )
                 val saved = FileInbox.download(
                     app,
@@ -1735,7 +1794,9 @@ class HermesController(private val app: Application) {
                 if (requestId != null) {
                     rpc?.respond(requestId, jsonObject("ok" to false, "error" to message))
                 } else {
-                    _ui.update { it.copy(error = "Datoteka nije preuzeta: $message") }
+                    _ui.update {
+                        it.copy(error = app.getString(R.string.file_not_downloaded, message))
+                    }
                 }
             }
         }
@@ -1792,7 +1853,7 @@ class HermesController(private val app: Application) {
     fun clearError() = _ui.update { it.copy(error = null, notice = null) }
 
     fun voiceComingSoon() = _ui.update {
-        it.copy(notice = "Glasovni način rada stiže u sljedećem koraku.")
+        it.copy(notice = app.getString(R.string.voice_mode_coming_soon))
     }
 
     fun enableHandsFree() {
@@ -1803,13 +1864,13 @@ class HermesController(private val app: Application) {
         )
         applyVoiceSettings(updated)
         _ui.update {
-            it.copy(notice = "Hands-free je uključen. Reci \"Hey Hermes\".")
+            it.copy(notice = app.getString(R.string.hands_free_enabled))
         }
     }
 
     fun startVoiceService() {
         HermesService.start(app)
-        _ui.update { it.copy(notice = "Glasovni servis je pokrenut. Reci \"Hey Hermes\".") }
+        _ui.update { it.copy(notice = app.getString(R.string.voice_service_started)) }
     }
 
     /** Save credentials + apply the Hands-free toggle without leaving Settings. */
@@ -1825,7 +1886,7 @@ class HermesController(private val app: Application) {
     fun testMicrophone() {
         val client = rest
         if (client == null || rpc?.isReady() != true) {
-            _ui.update { it.copy(error = "Nisam povezan s Hermesom. Testiraj vezu u Postavkama.") }
+            _ui.update { it.copy(error = app.getString(R.string.not_connected_test_settings)) }
             return
         }
         voiceJob?.cancel()
@@ -1834,18 +1895,20 @@ class HermesController(private val app: Application) {
             try {
                 HermesService.stop(app)
                 delay(400)
-                VoiceDiagnostics.update { it.copy(lastMicTest = "Snimam 6 s…", lastError = null) }
+                VoiceDiagnostics.update {
+                    it.copy(lastMicTest = app.getString(R.string.recording_6s), lastError = null)
+                }
                 _ui.update { it.copy(voiceState = "listening", error = null) }
                 val wav = recorder.recordFixed(6_000)
                 val peak = wavPeak(wav)
                 if (peak < 300) {
                     VoiceDiagnostics.update {
-                        it.copy(lastMicTest = "Mikrofon ne daje signal (peak=$peak). Provjeri dozvolu i da mik nije zauzet.")
+                        it.copy(lastMicTest = app.getString(R.string.mic_no_signal_peak, peak))
                     }
                     _ui.update {
                         it.copy(
                             voiceState = "idle",
-                            notice = "Mikrofon ne daje signal. Provjeri dozvolu za mikrofon i da ga Bixby/Google ne drži.",
+                            notice = app.getString(R.string.mic_no_signal),
                         )
                     }
                     return@launch
@@ -1853,21 +1916,28 @@ class HermesController(private val app: Application) {
                 _ui.update { it.copy(voiceState = "transcribing") }
                 val transcript = client.transcribe(wav).trim()
                 VoiceDiagnostics.update {
-                    it.copy(lastMicTest = "peak=$peak · " + transcript.ifBlank { "ništa nije prepoznato" })
+                    it.copy(
+                        lastMicTest = "peak=$peak · " + transcript.ifBlank {
+                            app.getString(R.string.nothing_recognized)
+                        },
+                    )
                 }
                 _ui.update {
                     it.copy(
                         voiceState = "idle",
                         notice = if (transcript.isBlank()) {
-                            "Mikrofon radi, ali STT nije prepoznao govor."
+                            app.getString(R.string.mic_works_no_stt)
                         } else {
-                            "STT test: \"$transcript\""
+                            app.getString(R.string.stt_test_result, transcript)
                         },
                     )
                 }
             } catch (error: Exception) {
                 VoiceDiagnostics.update {
-                    it.copy(lastMicTest = "Greška", lastError = humanError(error))
+                    it.copy(
+                        lastMicTest = app.getString(R.string.error),
+                        lastError = humanError(error),
+                    )
                 }
                 _ui.update { it.copy(voiceState = "idle", error = humanError(error)) }
             } finally {
@@ -1884,17 +1954,20 @@ class HermesController(private val app: Application) {
             try {
                 HermesService.stop(app)
                 delay(400)
-                VoiceDiagnostics.update { it.copy(lastDetection = "Slušam 6 s…", lastError = null) }
+                VoiceDiagnostics.update {
+                    it.copy(lastDetection = app.getString(R.string.listening_6s), lastError = null)
+                }
                 _ui.update { it.copy(voiceState = "listening", error = null) }
                 val wav = recorder.recordFixed(6_000)
                 val peak = wavPeak(wav)
                 _ui.update { it.copy(voiceState = "thinking") }
                 if (peak < 300) {
+                    val message = app.getString(R.string.mic_no_signal_peak_short, peak)
                     VoiceDiagnostics.update {
-                        it.copy(lastDetection = "Mikrofon ne daje signal (peak=$peak).")
+                        it.copy(lastDetection = message)
                     }
                     _ui.update {
-                        it.copy(voiceState = "idle", notice = "Mikrofon ne daje signal (peak=$peak).")
+                        it.copy(voiceState = "idle", notice = message)
                     }
                     return@launch
                 }
@@ -1906,9 +1979,9 @@ class HermesController(private val app: Application) {
                 VoiceDiagnostics.update {
                     it.copy(
                         lastDetection = keyword ?: if (initialized) {
-                            "Nije prepoznato — pokušaj izgovoriti engleski \"Hey Hermes\"."
+                            app.getString(R.string.wake_not_recognized_try_english)
                         } else {
-                            "KWS model se nije učitao."
+                            app.getString(R.string.kws_model_not_loaded)
                         },
                     )
                 }
@@ -1916,9 +1989,9 @@ class HermesController(private val app: Application) {
                     it.copy(
                         voiceState = "idle",
                         notice = if (keyword != null) {
-                            "Wake word prepoznat: $keyword"
+                            app.getString(R.string.wake_word_recognized, keyword)
                         } else {
-                            "Wake word nije prepoznat. Vidi diagnostiku u Postavkama."
+                            app.getString(R.string.wake_word_not_recognized)
                         },
                     )
                 }
@@ -1970,7 +2043,7 @@ class HermesController(private val app: Application) {
         }
         scope.launch {
             try {
-                val info = Updater.check(BuildConfig.VERSION_CODE)
+                val info = Updater.check(app, BuildConfig.VERSION_CODE)
                 _ui.update {
                     it.copy(
                         update = it.update.copy(
@@ -1987,7 +2060,8 @@ class HermesController(private val app: Application) {
                     it.copy(
                         update = it.update.copy(
                             checking = false,
-                            error = error.message ?: "Provjera ažuriranja nije uspjela.",
+                            error = error.message
+                                ?: app.getString(R.string.update_check_failed),
                         ),
                     )
                 }
@@ -2000,7 +2074,7 @@ class HermesController(private val app: Application) {
         if (_ui.value.update.downloading) return
         if (!app.packageManager.canRequestPackageInstalls()) {
             _ui.update {
-                it.copy(notice = "Dozvoli instalaciju iz Hermesa, pa ponovno pritisni Preuzmi i instaliraj.")
+                it.copy(notice = app.getString(R.string.allow_install_from_hermes))
             }
             val intent = Intent(
                 Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
@@ -2040,7 +2114,7 @@ class HermesController(private val app: Application) {
                             available = null,
                             upToDate = false,
                         ),
-                        notice = "Instalacijski dijalog je otvoren.",
+                        notice = app.getString(R.string.installer_opened),
                     )
                 }
             } catch (error: Exception) {
@@ -2050,7 +2124,8 @@ class HermesController(private val app: Application) {
                         update = it.update.copy(
                             downloading = false,
                             progress = null,
-                            error = error.message ?: "Preuzimanje ažuriranja nije uspjelo.",
+                            error = error.message
+                                ?: app.getString(R.string.update_download_failed),
                         ),
                     )
                 }
@@ -2083,17 +2158,21 @@ class HermesController(private val app: Application) {
         scope.launch {
             _ui.update { it.copy(onboardingBusy = true, onboardingResult = null) }
             val result = runCatching {
-                val probe = HermesRest(settings)
+                val probe = HermesRest(app, settings)
                 probe.ensureAuthenticated()
                 val me = probe.me()
                 val ticket = probe.wsTicket()
                 handshake(probe, ticket)
-                "Povezan kao ${me.str("user_id").ifBlank { settings.username }}."
+                app.getString(
+                    R.string.connected_as,
+                    me.str("user_id").ifBlank { settings.username },
+                )
             }
             _ui.update {
                 it.copy(
                     onboardingBusy = false,
                     onboardingResult = result.getOrElse { error -> humanError(error) },
+                    onboardingOk = result.isSuccess,
                 )
             }
         }
@@ -2119,7 +2198,11 @@ class HermesController(private val app: Application) {
 
                 override fun onClosed(webSocket: WebSocket, code: Int, reason: String) {
                     if (!ready.isCompleted) {
-                        ready.completeExceptionally(IllegalStateException(reason.ifBlank { "WS zatvoren" }))
+                        ready.completeExceptionally(
+                            IllegalStateException(
+                                reason.ifBlank { app.getString(R.string.ws_closed) },
+                            ),
+                        )
                     }
                 }
             },
@@ -2154,8 +2237,8 @@ class HermesController(private val app: Application) {
         return when {
             raw.contains("active turn lease", ignoreCase = true) ||
                 raw.contains("turn lease", ignoreCase = true) ->
-                "Telegram upravo piše u ovu sesiju. Pričekaj da završi, pa pošalji ponovno."
-            error is ApiError -> error.message ?: "Greška servera"
+                app.getString(R.string.telegram_busy)
+            error is ApiError -> error.message ?: app.getString(R.string.server_error)
             else -> raw
         }
     }

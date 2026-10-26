@@ -1,5 +1,7 @@
 package hr.sting.hermes.data
 
+import android.content.Context
+import hr.sting.hermes.R
 import hr.sting.hermes.util.AppLog
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
@@ -58,8 +60,10 @@ class RpcError(val code: Int, message: String) : Exception(message)
  */
 class HermesRpc(
     private val rest: HermesRest,
+    context: Context,
     private val scope: CoroutineScope,
 ) {
+    private val appContext = context.applicationContext
     private val _state = MutableStateFlow<LinkState>(LinkState.Idle)
     val state: StateFlow<LinkState> = _state.asStateFlow()
 
@@ -99,7 +103,7 @@ class HermesRpc(
         heartbeatJob = null
         socket?.close(1000, "client closed")
         socket = null
-        failAllPending("Veza je zatvorena")
+        failAllPending(appContext.getString(R.string.rpc_connection_closed))
         _state.value = LinkState.Idle
     }
 
@@ -124,7 +128,7 @@ class HermesRpc(
         if (!sent) {
             pending.remove(id)
             AppLog.add("rpc $method -> socket closed")
-            throw RpcError(0, "Veza sa serverom nije otvorena")
+            throw RpcError(0, appContext.getString(R.string.server_connection_not_open))
         }
         AppLog.add("rpc $method -> sent")
         return try {
@@ -200,7 +204,9 @@ class HermesRpc(
             } catch (error: Exception) {
                 if (stopped) break
                 AppLog.add("ws failed: ${error.message ?: error.javaClass.simpleName}")
-                _state.value = LinkState.Failed(error.message ?: "Veza nije uspjela")
+                _state.value = LinkState.Failed(
+                    error.message ?: appContext.getString(R.string.rpc_connection_failed),
+                )
                 delay(backoff)
                 backoff = (backoff * 2).coerceAtMost(15_000L)
             } finally {
@@ -208,7 +214,7 @@ class HermesRpc(
                 heartbeatJob = null
                 active?.close(1000, "reconnect")
                 socket = null
-                failAllPending("Veza je prekinuta")
+                failAllPending(appContext.getString(R.string.rpc_connection_interrupted))
             }
         }
         _state.value = LinkState.Idle
@@ -299,7 +305,9 @@ class HermesRpc(
             AppLog.add("ws closed code=$code reason=$reason")
             closed.complete(Unit)
             if (!stopped) {
-                _state.value = LinkState.Failed(reason.ifBlank { "Veza je zatvorena" })
+                _state.value = LinkState.Failed(
+                    reason.ifBlank { appContext.getString(R.string.rpc_connection_closed) },
+                )
             }
         }
 
@@ -308,7 +316,9 @@ class HermesRpc(
             ready.completeExceptionally(t)
             closed.complete(Unit)
             if (!stopped) {
-                _state.value = LinkState.Failed(t.message ?: "Veza nije uspjela")
+                _state.value = LinkState.Failed(
+                    t.message ?: appContext.getString(R.string.rpc_connection_failed),
+                )
             }
         }
     }

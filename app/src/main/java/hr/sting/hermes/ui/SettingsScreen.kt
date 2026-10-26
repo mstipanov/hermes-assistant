@@ -49,6 +49,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -57,6 +58,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import hr.sting.hermes.BuildConfig
+import hr.sting.hermes.R
 import hr.sting.hermes.data.AppSettings
 import hr.sting.hermes.data.HermesUiState
 import hr.sting.hermes.data.LinkState
@@ -86,6 +88,8 @@ fun SettingsScreen(
     var showApiToken by remember { mutableStateOf(false) }
     val clipboard = LocalClipboardManager.current
     val context = LocalContext.current
+    val assistantConnectedResult = stringResource(R.string.assistant_connected_toast)
+    val assistantNotSetResult = stringResource(R.string.assistant_not_set)
     val roleManager = remember { context.getSystemService(RoleManager::class.java) }
     var roleResult by remember { mutableStateOf<String?>(null) }
     var micDenied by remember { mutableStateOf(false) }
@@ -124,9 +128,9 @@ fun SettingsScreen(
         ActivityResultContracts.StartActivityForResult(),
     ) {
         roleResult = if (roleManager?.isRoleHeld(RoleManager.ROLE_ASSISTANT) == true) {
-            "Hermes je sada zadani digitalni asistent."
+            assistantConnectedResult
         } else {
-            "Hermes nije postavljen kao asistent. Otvori Postavke → Aplikacije → Zadane aplikacije."
+            assistantNotSetResult
         }
     }
     val needsAccess = draft.serverUrl.contains("sting.hr", ignoreCase = true)
@@ -139,10 +143,13 @@ fun SettingsScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text("Postavke") },
+                title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
-                        Icon(Icons.Filled.ArrowBack, contentDescription = "Natrag")
+                        Icon(
+                            Icons.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back),
+                        )
                     }
                 },
             )
@@ -157,14 +164,14 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Text(
-                "Povezivanje",
+                stringResource(R.string.connection_section),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             OutlinedTextField(
                 value = draft.serverUrl,
                 onValueChange = { draft = draft.copy(serverUrl = it) },
-                label = { Text("Adresa servera") },
+                label = { Text(stringResource(R.string.server_url)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -172,7 +179,7 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = draft.apiToken,
                 onValueChange = { draft = draft.copy(apiToken = it) },
-                label = { Text("API token") },
+                label = { Text(stringResource(R.string.api_token)) },
                 singleLine = true,
                 visualTransformation = if (showApiToken) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -189,14 +196,14 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = draft.username,
                 onValueChange = { draft = draft.copy(username = it) },
-                label = { Text("Korisničko ime") },
+                label = { Text(stringResource(R.string.username)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = draft.password,
                 onValueChange = { draft = draft.copy(password = it) },
-                label = { Text("Lozinka") },
+                label = { Text(stringResource(R.string.password)) },
                 singleLine = true,
                 visualTransformation = PasswordVisualTransformation(),
                 modifier = Modifier.fillMaxWidth(),
@@ -205,14 +212,14 @@ fun SettingsScreen(
             OutlinedTextField(
                 value = draft.accessClientId,
                 onValueChange = { draft = draft.copy(accessClientId = it) },
-                label = { Text("Cloudflare Access Client ID") },
+                label = { Text("Cloudflare " + stringResource(R.string.access_client_id)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = draft.accessClientSecret,
                 onValueChange = { draft = draft.copy(accessClientSecret = it) },
-                label = { Text("Cloudflare Access Client Secret") },
+                label = { Text("Cloudflare " + stringResource(R.string.access_client_secret)) },
                 singleLine = true,
                 visualTransformation = if (showSecret) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -230,12 +237,12 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
 
             Text(
-                "Sustavni asistent",
+                stringResource(R.string.system_assistant),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "Postavi Hermesa kao zadani digitalni asistent. Dugi pritisak na side/home tipku tada otvara Hermesa i odmah počinje slušati.",
+                stringResource(R.string.system_assistant_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -255,7 +262,13 @@ fun SettingsScreen(
                     },
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (held) "Hermes je zadani asistent" else "Postavi kao zadanog asistenta")
+                    Text(
+                        if (held) {
+                            stringResource(R.string.assistant_is_default)
+                        } else {
+                            stringResource(R.string.set_as_default_assistant)
+                        },
+                    )
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -263,30 +276,28 @@ fun SettingsScreen(
                     onClick = { AssistantSettings.openDefaultApps(context) },
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Zadane aplikacije")
+                    Text(stringResource(R.string.default_apps))
                 }
                 OutlinedButton(
                     onClick = { AssistantSettings.openSideKey(context) },
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Side tipka")
+                    Text(stringResource(R.string.side_key))
                 }
             }
             TextButton(onClick = { AssistantSettings.openVoiceInput(context) }) {
-                Text("Otvori Assist & voice input")
+                Text(stringResource(R.string.open_assist_voice_input))
             }
             roleResult?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             }
             Text(
-                "Samsung: Postavke → Napredne funkcije → Tipka sa strane → Pritisni i drži → Digitalni asistent. " +
-                    "Ili Postavke → Aplikacije → Zadane aplikacije → Digitalni asistent.",
+                stringResource(R.string.samsung_instructions),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "Hotword \"Hey Google\" / \"Hi Bixby\" ostaje vezan uz Google/Bixby i ne može se preuzeti. " +
-                    "Hermes zato ima vlastiti \"Hey Hermes\" (Hands-free) koji radi iz njegovog servisa.",
+                stringResource(R.string.hotword_note),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -294,18 +305,18 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
 
             Text(
-                "Dozvole za akcije",
+                stringResource(R.string.action_permissions),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "Hermes može otvarati aplikacije, puštati glazbu, postavljati alarme i otvarati URL-ove bez posebnih dozvola. Za pronalaženje kontakata treba pristup kontaktima, a za direktan poziv (bez dialera) i CALL_PHONE.",
+                stringResource(R.string.action_permissions_desc),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             ToggleRow(
-                title = "Potvrdi akcije na telefonu",
-                subtitle = "Prije poziva, SMS-a, alarma, URL-a ili pokretanja aplikacije Hermes traži tvoj pristanak.",
+                title = stringResource(R.string.confirm_device_actions),
+                subtitle = stringResource(R.string.confirm_device_actions_desc),
                 checked = draft.confirmDeviceActions,
                 onChange = {
                     val updated = draft.copy(confirmDeviceActions = it)
@@ -319,21 +330,33 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                     enabled = !contactsGranted,
                 ) {
-                    Text(if (contactsGranted) "Kontakti ✓" else "Dozvoli kontakte")
+                    Text(
+                        if (contactsGranted) {
+                            stringResource(R.string.contacts_granted)
+                        } else {
+                            stringResource(R.string.allow_contacts)
+                        },
+                    )
                 }
                 OutlinedButton(
                     onClick = { callLauncher.launch(Manifest.permission.CALL_PHONE) },
                     modifier = Modifier.weight(1f),
                     enabled = !callGranted,
                 ) {
-                    Text(if (callGranted) "Pozivi ✓" else "Dozvoli pozive")
+                    Text(
+                        if (callGranted) {
+                            stringResource(R.string.calls_granted)
+                        } else {
+                            stringResource(R.string.allow_calls)
+                        },
+                    )
                 }
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
 
             Text(
-                "Zadani prikaz",
+                stringResource(R.string.default_view),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -345,7 +368,7 @@ fun SettingsScreen(
                         draft = updated
                         onApplyVoice(updated)
                     },
-                    label = { Text("Audio only") },
+                    label = { Text(stringResource(R.string.audio_only)) },
                 )
                 FilterChip(
                     selected = draft.defaultView == "chat",
@@ -354,17 +377,17 @@ fun SettingsScreen(
                         draft = updated
                         onApplyVoice(updated)
                     },
-                    label = { Text("Razgovor") },
+                    label = { Text(stringResource(R.string.chat)) },
                 )
             }
             Text(
-                "Audio only je veliki orb, status i zadnji odgovor — bez tipkovnice i transkripta. Idealno za auto i MyCar.",
+                stringResource(R.string.audio_only_desc),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Text(
-                "Prepoznavanje govora (STT)",
+                stringResource(R.string.stt_section),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -376,7 +399,7 @@ fun SettingsScreen(
                         draft = updated
                         onApplyVoice(updated)
                     },
-                    label = { Text("Google (brzo)") },
+                    label = { Text(stringResource(R.string.google_fast)) },
                 )
                 FilterChip(
                     selected = draft.sttEngine == "server",
@@ -385,26 +408,26 @@ fun SettingsScreen(
                         draft = updated
                         onApplyVoice(updated)
                     },
-                    label = { Text("Hermes server (privatno)") },
+                    label = { Text(stringResource(R.string.hermes_server_private)) },
                 )
             }
             Text(
-                "Google koristi isti recognition servis kao Gboard i mnogo je brži. Audio ide Googleu. Hermes server šalje snimku na tvoj Mac (Whisper medium) — privatnije, ali sporije.",
+                stringResource(R.string.stt_desc),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             TextButton(onClick = { AssistantSettings.openVoiceInput(context) }) {
-                Text("Otvori postavke prepoznavanja govora")
+                Text(stringResource(R.string.open_speech_settings))
             }
 
             Text(
-                "Glas",
+                stringResource(R.string.voice_section),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             ToggleRow(
-                title = "Nastavi slušati nakon odgovora",
-                subtitle = "Nakon što Hermes završi odgovor, odmah ponovno otvori mikrofon za sljedeće pitanje.",
+                title = stringResource(R.string.continue_listening),
+                subtitle = stringResource(R.string.continue_listening_desc),
                 checked = draft.continuousVoice,
                 onChange = {
                     val updated = draft.copy(continuousVoice = it)
@@ -413,13 +436,13 @@ fun SettingsScreen(
                 },
             )
             ToggleRow(
-                title = "Glasovni odgovori",
-                subtitle = "Hermes govori samo kad je pitanje bilo glasovno. Na tipkani tekst odgovara samo tekstom.",
+                title = stringResource(R.string.voice_replies),
+                subtitle = stringResource(R.string.voice_replies_desc),
                 checked = draft.ttsEnabled,
                 onChange = { draft = draft.copy(ttsEnabled = it) },
             )
             Text(
-                "TTS glas",
+                stringResource(R.string.tts_voice),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -431,7 +454,7 @@ fun SettingsScreen(
                         draft = updated
                         onApplyVoice(updated)
                     },
-                    label = { Text("Android (brzo)") },
+                    label = { Text(stringResource(R.string.android_fast)) },
                 )
                 FilterChip(
                     selected = draft.ttsEngine == "hermes",
@@ -440,23 +463,23 @@ fun SettingsScreen(
                         draft = updated
                         onApplyVoice(updated)
                     },
-                    label = { Text("Hermes Gabrijela") },
+                    label = { Text(stringResource(R.string.hermes_gabrijela)) },
                 )
             }
             Text(
-                "Android koristi glas koji telefon ima (Samsung je često potpuno lokalan, Google može koristiti mrežni glas) — počinje gotovo odmah. Hermes Gabrijela je kvalitetniji neuralni glas, ali prvi zvuk čeka server.",
+                stringResource(R.string.tts_desc),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             if (draft.ttsEngine == "android") {
                 Text(
-                    "Glas telefona",
+                    stringResource(R.string.phone_voice),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (state.androidTtsVoices.isEmpty()) {
                     Text(
-                        "Još nema popisa glasova. Otvori postavke glasa telefona i instaliraj hrvatski glas, ili odaberi Hermes Gabrijelu.",
+                        stringResource(R.string.no_voices),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -475,7 +498,7 @@ fun SettingsScreen(
                             selected = draft.androidTtsVoice == null,
                             onClick = null,
                         )
-                        Text("Zadani glas telefona")
+                        Text(stringResource(R.string.default_phone_voice))
                     }
                     state.androidTtsVoices.forEach { voice ->
                         Row(
@@ -505,18 +528,18 @@ fun SettingsScreen(
                         }
                     },
                 ) {
-                    Text("Otvori postavke glasa telefona")
+                    Text(stringResource(R.string.open_phone_voice_settings))
                 }
             }
             ToggleRow(
-                title = "Dijeli sesiju s Telegramom",
-                subtitle = "App nastavlja isti razgovor kao Telegram bot; povijest se osvježi prije svakog pitanja.",
+                title = stringResource(R.string.share_telegram),
+                subtitle = stringResource(R.string.share_telegram_desc),
                 checked = draft.shareTelegramSession,
                 onChange = { draft = draft.copy(shareTelegramSession = it) },
             )
             ToggleRow(
-                title = "Hands-free",
-                subtitle = "Slušaj \"Hey Hermes\" dok je aplikacija u pozadini (traži mikrofon i stalnu notifikaciju).",
+                title = stringResource(R.string.hands_free),
+                subtitle = stringResource(R.string.hands_free_desc),
                 checked = draft.handsFree,
                 onChange = { enabled ->
                     if (!enabled) {
@@ -537,8 +560,8 @@ fun SettingsScreen(
                 },
             )
             ToggleRow(
-                title = "Otvori u načinu slušanja",
-                subtitle = "Kad god otvoriš Hermesa (uključujući Samsung dvostruki pritisak → Open app), odmah počne slušati.",
+                title = stringResource(R.string.open_listening_mode),
+                subtitle = stringResource(R.string.open_listening_mode_desc),
                 checked = draft.listenOnOpen,
                 onChange = {
                     val updated = draft.copy(listenOnOpen = it)
@@ -548,7 +571,7 @@ fun SettingsScreen(
             )
             if (micDenied) {
                 Text(
-                    "Dozvola za mikrofon je odbijena. Otvori dozvole aplikacije i uključi Mikrofon.",
+                    stringResource(R.string.mic_permission_denied),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.error,
                 )
@@ -557,54 +580,82 @@ fun SettingsScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
 
             Text(
-                "Glasovna diagnostika",
+                stringResource(R.string.voice_diagnostics),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "Servis: " + if (voiceDiag.serviceRunning) "radi" else "ne radi",
+                stringResource(R.string.service) + ": " + if (voiceDiag.serviceRunning) {
+                    stringResource(R.string.running)
+                } else {
+                    stringResource(R.string.not_running)
+                },
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
-                "Wake word model: " + if (voiceDiag.kwsReady) "učitan" else "nije učitan",
+                stringResource(R.string.wake_word_model) + ": " + if (voiceDiag.kwsReady) {
+                    stringResource(R.string.loaded)
+                } else {
+                    stringResource(R.string.not_loaded)
+                },
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
-                "Mikrofon: " + if (voiceDiag.micPermission) "dozvoljen" else "nije dozvoljen",
+                stringResource(R.string.microphone) + ": " + if (voiceDiag.micPermission) {
+                    stringResource(R.string.allowed)
+                } else {
+                    stringResource(R.string.not_allowed)
+                },
                 style = MaterialTheme.typography.bodySmall,
             )
             voiceDiag.lastDetection?.let {
-                Text("Zadnja detekcija: $it", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    stringResource(R.string.last_detection) + ": " + it,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             voiceDiag.lastMicTest?.let {
-                Text("STT test: $it", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    stringResource(R.string.stt_test) + ": " + it,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             voiceDiag.lastTts?.let {
-                Text("TTS: $it", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    stringResource(R.string.tts_label) + ": " + it,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             voiceDiag.lastStt?.let {
-                Text("STT: $it", style = MaterialTheme.typography.bodySmall)
+                Text(
+                    stringResource(R.string.stt_label) + ": " + it,
+                    style = MaterialTheme.typography.bodySmall,
+                )
             }
             voiceDiag.lastError?.let {
                 Text(
-                    "Greška: $it",
+                    stringResource(R.string.error) + ": " + it,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(onClick = onTestMic, modifier = Modifier.weight(1f)) {
-                    Text("Testiraj mikrofon")
+                    Text(stringResource(R.string.test_microphone))
                 }
                 OutlinedButton(onClick = onTestWake, modifier = Modifier.weight(1f)) {
-                    Text("Testiraj \"Hey Hermes\"")
+                    Text(stringResource(R.string.test_wake_word))
                 }
             }
             OutlinedButton(onClick = onTestTts, modifier = Modifier.fillMaxWidth()) {
-                Text("Testiraj glas (TTS)")
+                Text(stringResource(R.string.test_voice))
             }
             Text(
-                "Glasovni odgovori: " + if (draft.ttsEnabled) "uključeni" else "isključeni",
+                stringResource(R.string.voice_replies) + ": " + if (draft.ttsEnabled) {
+                    stringResource(R.string.toggle_on)
+                } else {
+                    stringResource(R.string.toggle_off)
+                },
                 style = MaterialTheme.typography.bodySmall,
                 color = if (draft.ttsEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
             )
@@ -618,7 +669,7 @@ fun SettingsScreen(
                     )
                 }
             }) {
-                Text("Otvori dozvole aplikacije")
+                Text(stringResource(R.string.open_app_permissions))
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
@@ -628,7 +679,7 @@ fun SettingsScreen(
                 modifier = Modifier.fillMaxWidth(),
                 enabled = readyToSave,
             ) {
-                Text("Spremi")
+                Text(stringResource(R.string.save))
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
@@ -636,66 +687,79 @@ fun SettingsScreen(
                     modifier = Modifier.weight(1f),
                     enabled = !state.onboardingBusy && readyToSave,
                 ) {
-                    Text("Testiraj vezu")
+                    Text(stringResource(R.string.test_connection))
                 }
                 OutlinedButton(
                     onClick = onReconnect,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Ponovno poveži")
+                    Text(stringResource(R.string.reconnect))
                 }
             }
             if (state.onboardingBusy) {
-                Text("Testiram…", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.testing), style = MaterialTheme.typography.bodySmall)
             }
             state.onboardingResult?.let { result ->
-                val ok = result.startsWith("Povezan")
                 Text(
                     result,
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (ok) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.error,
+                    color = if (state.onboardingOk) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
                 )
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 6.dp))
             Text(
-                "Diagnostika",
+                stringResource(R.string.diagnostics),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Text(
-                "Veza: " + when (state.link) {
-                    is LinkState.Ready -> "povezan"
-                    is LinkState.Connecting -> "spajam se…"
-                    is LinkState.Failed -> "greška"
-                    else -> "nije povezan"
+                stringResource(R.string.link) + ": " + when (state.link) {
+                    is LinkState.Ready -> stringResource(R.string.link_connected)
+                    is LinkState.Connecting -> stringResource(R.string.link_connecting)
+                    is LinkState.Failed -> stringResource(R.string.link_error)
+                    else -> stringResource(R.string.link_not_connected)
                 },
                 style = MaterialTheme.typography.bodySmall,
             )
-            Text("Račun: ${state.account.ifBlank { "—" }}", style = MaterialTheme.typography.bodySmall)
             Text(
-                "API token: " + if (draft.apiToken.isNotBlank()) "postavljen" else "nije postavljen",
+                stringResource(R.string.account) + ": " + state.account.ifBlank { "—" },
                 style = MaterialTheme.typography.bodySmall,
             )
             Text(
-                "Cloudflare Access: " +
+                stringResource(R.string.api_token) + ": " + if (draft.apiToken.isNotBlank()) {
+                    stringResource(R.string.set)
+                } else {
+                    stringResource(R.string.not_set)
+                },
+                style = MaterialTheme.typography.bodySmall,
+            )
+            Text(
+                stringResource(R.string.cloudflare_access_status) + ": " +
                     if (draft.accessClientId.isNotBlank() && draft.accessClientSecret.isNotBlank()) {
-                        "postavljen"
+                        stringResource(R.string.set)
                     } else {
-                        "nije postavljen"
+                        stringResource(R.string.not_set)
                     },
                 style = MaterialTheme.typography.bodySmall,
             )
             (state.error ?: (state.link as? LinkState.Failed)?.message)?.let { error ->
                 Text(
-                    "Zadnja greška: $error",
+                    stringResource(R.string.last_error) + ": $error",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            Text("Verzija: ${BuildConfig.VERSION_NAME}", style = MaterialTheme.typography.labelSmall)
             Text(
-                "Ažuriranje",
+                stringResource(R.string.version) + ": ${BuildConfig.VERSION_NAME}",
+                style = MaterialTheme.typography.labelSmall,
+            )
+            Text(
+                stringResource(R.string.updates),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -704,25 +768,31 @@ fun SettingsScreen(
                 enabled = !state.update.checking && !state.update.downloading,
                 modifier = Modifier.fillMaxWidth(),
             ) {
-                Text(if (state.update.checking) "Provjeravam…" else "Provjeri ažuriranja")
+                Text(
+                    if (state.update.checking) {
+                        stringResource(R.string.checking)
+                    } else {
+                        stringResource(R.string.check_updates)
+                    },
+                )
             }
             if (state.update.upToDate) {
                 Text(
-                    "Aplikacija je ažurna (${BuildConfig.VERSION_NAME}).",
+                    stringResource(R.string.up_to_date, BuildConfig.VERSION_NAME),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
             }
             state.update.error?.let { error ->
                 Text(
-                    "Ažuriranje: $error",
+                    stringResource(R.string.update_error, error),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
             state.update.available?.let { info ->
                 Text(
-                    "Dostupna verzija ${info.versionName}.",
+                    stringResource(R.string.update_available, info.versionName),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.primary,
                 )
@@ -734,16 +804,25 @@ fun SettingsScreen(
                     enabled = !state.update.downloading,
                     modifier = Modifier.fillMaxWidth(),
                 ) {
-                    Text(if (state.update.downloading) "Preuzimam…" else "Preuzmi i instaliraj")
+                    Text(
+                        if (state.update.downloading) {
+                            stringResource(R.string.downloading)
+                        } else {
+                            stringResource(R.string.download_and_install)
+                        },
+                    )
                 }
             }
             if (state.update.downloading) {
                 val progress = state.update.progress
                 Text(
                     if (progress != null) {
-                        "Preuzimam… ${(progress * 100).toInt().coerceIn(0, 100)}%"
+                        stringResource(
+                            R.string.downloading_progress,
+                            (progress * 100).toInt().coerceIn(0, 100),
+                        )
                     } else {
-                        "Preuzimam…"
+                        stringResource(R.string.downloading)
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -751,7 +830,7 @@ fun SettingsScreen(
             }
             if (appLog.isNotEmpty()) {
                 Text(
-                    "Zadnji RPC log:",
+                    stringResource(R.string.last_rpc_log),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -782,15 +861,15 @@ fun SettingsScreen(
                 }
                 clipboard.setText(AnnotatedString(diagnostics))
             }) {
-                Text("Kopiraj diagnostiku")
+                Text(stringResource(R.string.copy_diagnostics))
             }
 
             Spacer(Modifier.height(6.dp))
             OutlinedButton(onClick = onLogout, modifier = Modifier.fillMaxWidth()) {
-                Text("Odjavi se i obriši podatke")
+                Text(stringResource(R.string.logout_and_clear))
             }
             Text(
-                "Lozinka i Access tajna spremaju se AES/GCM ključem iz Android Keystorea. Ne napuštaju telefon.",
+                stringResource(R.string.secrets_note),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

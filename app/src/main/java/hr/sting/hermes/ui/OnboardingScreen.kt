@@ -33,11 +33,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import hr.sting.hermes.R
 import hr.sting.hermes.data.AppSettings
 import hr.sting.hermes.data.HermesUiState
 
@@ -73,12 +75,12 @@ fun OnboardingScreen(
                 tint = MaterialTheme.colorScheme.primary,
             )
             Text(
-                text = "Poveži Hermesa",
+                text = stringResource(R.string.connect_title),
                 style = MaterialTheme.typography.headlineMedium,
                 fontWeight = FontWeight.SemiBold,
             )
             Text(
-                text = "Unesi pristupne podatke svog Hermes servera. Lozinka i Access tajna ostaju šifrirani na ovom telefonu.",
+                text = stringResource(R.string.connect_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -86,7 +88,7 @@ fun OnboardingScreen(
             OutlinedTextField(
                 value = draft.serverUrl,
                 onValueChange = { draft = draft.copy(serverUrl = it) },
-                label = { Text("Adresa servera") },
+                label = { Text(stringResource(R.string.server_url)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
@@ -95,7 +97,7 @@ fun OnboardingScreen(
             OutlinedTextField(
                 value = draft.apiToken,
                 onValueChange = { draft = draft.copy(apiToken = it) },
-                label = { Text("API token (preporučeno)") },
+                label = { Text(stringResource(R.string.api_token_recommended)) },
                 singleLine = true,
                 visualTransformation = if (showApiToken) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -110,13 +112,13 @@ fun OnboardingScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
             )
             Text(
-                "Token generiraj na Macu: tools/make_api_key.py. Ako ga upišeš, lozinka nije potrebna.",
+                stringResource(R.string.api_token_help),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
             Text(
-                "ili se prijavi lozinkom",
+                stringResource(R.string.or_password_login),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -124,7 +126,7 @@ fun OnboardingScreen(
             OutlinedTextField(
                 value = draft.username,
                 onValueChange = { draft = draft.copy(username = it) },
-                label = { Text("Korisničko ime") },
+                label = { Text(stringResource(R.string.username)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -132,7 +134,7 @@ fun OnboardingScreen(
             OutlinedTextField(
                 value = draft.password,
                 onValueChange = { draft = draft.copy(password = it) },
-                label = { Text("Lozinka") },
+                label = { Text(stringResource(R.string.password)) },
                 singleLine = true,
                 visualTransformation = if (showPassword) VisualTransformation.None else PasswordVisualTransformation(),
                 trailingIcon = {
@@ -148,21 +150,27 @@ fun OnboardingScreen(
             )
 
             TextButton(onClick = { showAdvanced = !showAdvanced }) {
-                Text(if (showAdvanced) "Sakrij Cloudflare postavke" else "Cloudflare Access (service token)")
+                Text(
+                    if (showAdvanced) {
+                        stringResource(R.string.hide_cloudflare)
+                    } else {
+                        stringResource(R.string.cloudflare_access)
+                    },
+                )
             }
 
             if (showAdvanced) {
                 OutlinedTextField(
                     value = draft.accessClientId,
                     onValueChange = { draft = draft.copy(accessClientId = it) },
-                    label = { Text("Access Client ID") },
+                    label = { Text(stringResource(R.string.access_client_id)) },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 OutlinedTextField(
                     value = draft.accessClientSecret,
                     onValueChange = { draft = draft.copy(accessClientSecret = it) },
-                    label = { Text("Access Client Secret") },
+                    label = { Text(stringResource(R.string.access_client_secret)) },
                     singleLine = true,
                     visualTransformation = if (showAccessSecret) VisualTransformation.None else PasswordVisualTransformation(),
                     trailingIcon = {
@@ -177,13 +185,13 @@ fun OnboardingScreen(
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 )
                 Text(
-                    "Service token se ne ugrađuje u APK — unosi se samo ovdje.",
+                    stringResource(R.string.service_token_note),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 if (needsAccess && !accessReady) {
                     Text(
-                        "Za hermes.sting.hr oba Cloudflare Access polja su obavezna.",
+                        stringResource(R.string.access_required),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -202,7 +210,7 @@ fun OnboardingScreen(
                         CircularProgressIndicator(modifier = Modifier.height(18.dp), strokeWidth = 2.dp)
                         Spacer(Modifier.height(0.dp))
                     } else {
-                        Text("Testiraj vezu")
+                        Text(stringResource(R.string.test_connection))
                     }
                 }
                 Button(
@@ -210,12 +218,12 @@ fun OnboardingScreen(
                     enabled = !state.onboardingBusy && readyToConnect,
                     modifier = Modifier.weight(1f),
                 ) {
-                    Text("Spremi i kreni")
+                    Text(stringResource(R.string.save_and_start))
                 }
             }
 
             state.onboardingResult?.let { result ->
-                val ok = result.startsWith("Povezan")
+                val ok = state.onboardingOk
                 Surface(
                     color = if (ok) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.errorContainer,
                     shape = MaterialTheme.shapes.medium,
@@ -230,7 +238,7 @@ fun OnboardingScreen(
             }
 
             Text(
-                "Savjet: ako server nije javno dostupan, upiši lokalnu adresu (npr. http://192.168.8.37:9119).",
+                stringResource(R.string.onboarding_tip),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
