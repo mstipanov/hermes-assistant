@@ -1,0 +1,27 @@
+# Gradle / Android build output
+.gradle/
+.kotlin/
+build/
+app/build/
+captures/
+.externalNativeBuild/
+.cxx/
+*.iml
+local.properties
+
+# IDE and OS
+.idea/
+.DS_Store
+
+# Release signing — never commit the keystore or its credentials
+keystore.properties
+*.jks
+*.keystore
+
+# Python spike workspace
+tools/__pycache__/
+tools/spike/.venv/
+tools/spike/__pycache__/
+tools/spike/sherpa-onnx-kws-*/
+tools/spike/*.wav
+tools/spike/*.mp3

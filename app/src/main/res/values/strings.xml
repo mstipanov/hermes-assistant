@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Hermes</string>
+    <string name="assistant_name">Hermes</string>
+    <string name="connect_title">Poveži Hermesa</string>
+    <string name="connect_subtitle">Unesi pristupne podatke svog Hermes servera. Tajne ostaju na ovom telefonu.</string>
+    <string name="server_url">Adresa servera</string>
+    <string name="access_client_id">Cloudflare Access Client ID</string>
+    <string name="access_client_secret">Cloudflare Access Client Secret</string>
+    <string name="username">Korisničko ime</string>
+    <string name="password">Lozinka</string>
+    <string name="test_connection">Testiraj vezu</string>
+    <string name="save_and_start">Spremi i kreni</string>
+    <string name="connection_ok">Veza je uspostavljena.</string>
+    <string name="connection_failed">Veza nije uspjela.</string>
+    <string name="new_chat">Novi razgovor</string>
+    <string name="sessions">Razgovori</string>
+    <string name="settings">Postavke</string>
+    <string name="message_hint">Napiši poruku…</string>
+    <string name="send">Pošalji</string>
+    <string name="stop">Zaustavi</string>
+    <string name="approve">Odobri</string>
+    <string name="deny">Odbij</string>
+    <string name="shortcut_listen_short">Hermes</string>
+    <string name="shortcut_listen_long">Otvori Hermesa</string>
+    <string name="tile_label">Hermes</string>
+</resources>
