@@ -21,8 +21,8 @@ android {
         applicationId = "hr.sting.hermes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 45
-        versionName = "0.45"
+        versionCode = 46
+        versionName = "0.46"
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -46,6 +46,16 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.findByName("release")
+        }
+        // Test channel: the same code and the same release key, so a beta installs over the
+        // stable app (and back). The "-beta1" suffix only changes the version name, e.g.
+        // 0.46-beta1. Its APK lands in app/build/outputs/apk/beta — that directory sits inside
+        // the distributor's apkDir (…/outputs/apk), so delete it after grabbing the APK: the
+        // stable /version endpoint must never pick up a beta build.
+        create("beta") {
+            initWith(getByName("release"))
+            versionNameSuffix = "-beta1"
             signingConfig = signingConfigs.findByName("release")
         }
     }

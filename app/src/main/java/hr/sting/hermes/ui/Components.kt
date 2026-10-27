@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -80,12 +81,14 @@ fun MessageBubble(message: ChatMessage, onFileRetry: (String) -> Unit = {}) {
                 shape = RoundedCornerShape(18.dp, 18.dp, 4.dp, 18.dp),
                 modifier = Modifier.fillMaxWidth(0.86f),
             ) {
-                Text(
-                    text = message.text,
-                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
-                    style = MaterialTheme.typography.bodyLarge,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
+                SelectionContainer {
+                    Text(
+                        text = message.text,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    )
+                }
             }
         }
 
@@ -96,14 +99,18 @@ fun MessageBubble(message: ChatMessage, onFileRetry: (String) -> Unit = {}) {
                 modifier = Modifier.fillMaxWidth(0.94f),
             ) {
                 Column(modifier = Modifier.padding(horizontal = 14.dp, vertical = 10.dp)) {
-                    if (message.reasoning.isNotBlank()) {
-                        ReasoningBlock(message.reasoning)
-                        Spacer(Modifier.height(6.dp))
-                    }
-                    if (message.text.isBlank() && message.streaming) {
-                        TypingDots()
-                    } else {
-                        MarkdownLite(message.text)
+                    SelectionContainer {
+                        Column {
+                            if (message.reasoning.isNotBlank()) {
+                                ReasoningBlock(message.reasoning)
+                                Spacer(Modifier.height(6.dp))
+                            }
+                            if (message.text.isBlank() && message.streaming) {
+                                TypingDots()
+                            } else {
+                                MarkdownLite(message.text)
+                            }
+                        }
                     }
                 }
             }
@@ -113,12 +120,14 @@ fun MessageBubble(message: ChatMessage, onFileRetry: (String) -> Unit = {}) {
 
         MessageRole.FILE -> FileCard(message, onFileRetry)
 
-        MessageRole.SYSTEM -> Text(
-            text = message.text,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        MessageRole.SYSTEM -> SelectionContainer {
+            Text(
+                text = message.text,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(),
+            )
+        }
     }
 }
 

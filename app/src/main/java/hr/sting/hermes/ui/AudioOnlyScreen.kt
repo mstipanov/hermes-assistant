@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
@@ -297,12 +298,14 @@ fun AudioOnlyScreen(
                                 MaterialTheme.colorScheme.onSurfaceVariant
                             },
                         )
-                        Text(
-                            text = SpeechText.sanitize(reply.text),
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 6,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        SelectionContainer {
+                            Text(
+                                text = SpeechText.sanitize(reply.text),
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 6,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                         if (reply.streaming) {
                             Text(
                                 "…",
