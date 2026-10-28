@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.47-beta1
+- The app now has a real beta channel: "Check for updates" in a beta build finds new betas and installs them from hermes-beta.sting.hr. Stable builds keep checking the stable channel only.
+- The first start after a reboot or an app update retries the connection by itself — and reconnects as soon as the network is back — instead of staying offline until "Connect" is tapped.
+- Chat messages can be selected and copied; when the server really is unreachable the error is a clear message instead of the raw DNS text.
+
 ## 0.46-beta2
 - The first start after a reboot or an app update no longer gets stuck offline: the app keeps retrying the connection with backoff (about two minutes) and reconnects by itself as soon as the phone has a network again.
 - When the server really cannot be reached, the error is now a clear "Can't reach the server. Check your internet connection." instead of the raw DNS message.

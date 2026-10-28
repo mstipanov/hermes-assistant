@@ -21,8 +21,11 @@ android {
         applicationId = "hr.sting.hermes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 46
-        versionName = "0.46"
+        versionCode = 47
+        versionName = "0.47"
+        // The in-app updater reads <UPDATE_BASE_URL>/version and only installs APKs from that
+        // host. The beta build type overrides it so betas update from the beta channel.
+        buildConfigField("String", "UPDATE_BASE_URL", "\"https://hermes-assistant.sting.hr\"")
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -50,14 +53,15 @@ android {
         }
         // Test channel: the same code and the same release key, so a beta installs over the
         // stable app (and back). The "-beta<n>" suffix only changes the version name, e.g.
-        // 0.46-beta2; pass -PbetaNumber=2 for the second beta of the same version. Its APK
-        // lands in app/build/outputs/apk/beta — that directory sits inside the distributor's
-        // apkDir (…/outputs/apk), so delete it after grabbing the APK: the stable /version
-        // endpoint must never pick up a beta build.
+        // 0.47-beta1; pass -PbetaNumber=2 for a second beta of the same version. The APK lands
+        // in app/build/outputs/apk/beta, which the distributor serves as hermes-beta.sting.hr;
+        // the stable channel scans apk/release only, so a beta can never become the stable
+        // release. Every published beta needs a higher versionCode, or the updater skips it.
         create("beta") {
             initWith(getByName("release"))
             versionNameSuffix = "-beta" + (project.findProperty("betaNumber") as String? ?: "1")
             signingConfig = signingConfigs.findByName("release")
+            buildConfigField("String", "UPDATE_BASE_URL", "\"https://hermes-beta.sting.hr\"")
         }
     }
 

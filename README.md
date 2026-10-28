@@ -134,6 +134,20 @@ gh release create 0.44 app/build/outputs/apk/release/Hermes-0.44.apk \
 `<notes>` is the `CHANGELOG.md` section followed by the support footer from `SUPPORT.md`, so every
 release carries the support links.
 
+### Beta channel
+
+Beta builds live on their own hostname (`https://hermes-beta.sting.hr`) and in their own output
+directory, so a beta can never be served as the stable release and stable users never see one:
+
+```bash
+./gradlew :app:assembleBeta -PbetaNumber=1   # app/build/outputs/apk/beta/Hermes-<version>-beta1.apk
+```
+
+The distributor scans `app/build/outputs/apk/beta` and serves it at `hermes-beta.sting.hr`, which is
+also where a beta build's in-app updater looks (`BuildConfig.UPDATE_BASE_URL`). Each published beta
+must raise `versionCode`, otherwise the updater will not offer it. Publish the same APK as a GitHub
+pre-release, with the `CHANGELOG-beta.md` section as the notes.
+
 ## Structure
 
 - `app/src/main/java/hr/sting/hermes/data` — REST/WebSocket client, settings, secure storage

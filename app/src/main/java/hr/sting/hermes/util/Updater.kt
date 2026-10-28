@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Environment
+import hr.sting.hermes.BuildConfig
 import hr.sting.hermes.R
 import hr.sting.hermes.data.UpdateInfo
 import kotlinx.coroutines.Dispatchers
@@ -18,17 +19,20 @@ import java.security.MessageDigest
 
 /**
  * Checks the public AndroidAppDistributor endpoint and installs the newer APK.
+ * Stable builds use hermes-assistant.sting.hr, beta builds hermes-beta.sting.hr
+ * (BuildConfig.UPDATE_BASE_URL), so a beta never crosses over to stable.
  * The dashboard API token is deliberately not used here: the distributor's
  * /version and /apk paths are public.
  */
 object Updater {
-    private const val VERSION_HOST = "hermes-assistant.sting.hr"
-    private const val VERSION_URL = "https://$VERSION_HOST/version"
+    private val updateBase = BuildConfig.UPDATE_BASE_URL.trimEnd('/')
+    private val versionUrl = "$updateBase/version"
+    private val updateHost = Uri.parse(updateBase).host.orEmpty()
     private const val APK_MIME = "application/vnd.android.package-archive"
     private val SHA256 = Regex("[0-9a-fA-F]{64}")
 
     suspend fun check(context: Context, currentVersionCode: Int): UpdateInfo? = withContext(Dispatchers.IO) {
-        val connection = (URL("$VERSION_URL?t=${System.currentTimeMillis()}").openConnection()
+        val connection = (URL("$versionUrl?t=${System.currentTimeMillis()}").openConnection()
             as HttpURLConnection).apply {
             connectTimeout = 15_000
             readTimeout = 15_000
@@ -52,7 +56,7 @@ object Updater {
             val apkUrl = json.optString("apkUrl").trim()
             if (latestCode <= currentVersionCode || apkUrl.isBlank()) return@withContext null
             val parsed = Uri.parse(apkUrl)
-            if (parsed.scheme != "https" || parsed.host != VERSION_HOST) {
+            if (parsed.scheme != "https" || parsed.host != updateHost) {
                 throw IOException(context.getString(R.string.unexpected_apk_url, apkUrl))
             }
             val sha256 = json.optString("sha256").trim()
