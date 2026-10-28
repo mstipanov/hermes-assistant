@@ -159,19 +159,48 @@ fun AudioOnlyScreen(
                             .weight(1f)
                             .fillMaxWidth(),
                     ) {
-                        // Landscape has little height, so the orb gets its own column and
-                        // stays as large as the screen allows (up to the portrait size);
-                        // status, mode switch and buttons sit next to it.
-                        val orbSize = (maxHeight * 0.9f).coerceIn(96.dp, 238.dp)
+                        // Orb in the middle of the screen, as large as the height allows.
+                        // Status, mode switch and buttons sit to its left, the last answer
+                        // to its right, so nothing is pushed into one corner.
+                        val orbSize = (maxHeight * 0.86f).coerceIn(96.dp, 238.dp)
                         Row(
                             modifier = Modifier.fillMaxSize(),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Box(
+                            Column(
                                 modifier = Modifier
-                                    .width(orbSize + 12.dp)
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .verticalScroll(rememberScrollState()),
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                StatusBlock(status, hint, compact = true)
+                                ModeToggle(manualMode, onMicModeChange)
+                                PartialTranscript(state, voiceState, maxLines = 1)
+                                ReplayLast(lastReply, state.lastTurnFromVoice, voiceState, onSpeakLast)
+                                VoiceActions(
+                                    state = state,
+                                    landscape = true,
+                                    onFinishVoice = onFinishVoice,
+                                    onStopListening = onStopListening,
+                                    onStop = onStop,
+                                )
+                                BottomNotices(
+                                    state = state,
+                                    onApprove = onApprove,
+                                    onConfirmDeviceAction = onConfirmDeviceAction,
+                                    onOpenChat = onOpenChat,
+                                    onConnect = onConnect,
+                                    onClearMessage = onClearMessage,
+                                )
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .weight(1.15f)
                                     .fillMaxHeight(),
-                                contentAlignment = Alignment.Center,
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                verticalArrangement = Arrangement.Center,
                             ) {
                                 Orb(
                                     active = active,
@@ -184,27 +213,8 @@ fun AudioOnlyScreen(
                             }
                             Column(
                                 modifier = Modifier
-                                    .weight(0.8f)
-                                    .fillMaxHeight(),
-                                verticalArrangement = Arrangement.Center,
-                            ) {
-                                StatusBlock(status, hint, compact = true)
-                                PartialTranscript(state, voiceState, maxLines = 1)
-                                ReplayLast(lastReply, state.lastTurnFromVoice, voiceState, onSpeakLast)
-                                ModeToggle(manualMode, onMicModeChange)
-                                VoiceActions(
-                                    state = state,
-                                    landscape = true,
-                                    onFinishVoice = onFinishVoice,
-                                    onStopListening = onStopListening,
-                                    onStop = onStop,
-                                )
-                            }
-                            Column(
-                                modifier = Modifier
                                     .weight(1f)
                                     .fillMaxHeight()
-                                    .padding(start = 12.dp)
                                     .verticalScroll(rememberScrollState()),
                             ) {
                                 Spacer(Modifier.height(8.dp))
@@ -214,14 +224,6 @@ fun AudioOnlyScreen(
                                     maxLines = 4,
                                     onSpeakLast = onSpeakLast,
                                     onOpenChat = onOpenChat,
-                                )
-                                BottomNotices(
-                                    state = state,
-                                    onApprove = onApprove,
-                                    onConfirmDeviceAction = onConfirmDeviceAction,
-                                    onOpenChat = onOpenChat,
-                                    onConnect = onConnect,
-                                    onClearMessage = onClearMessage,
                                 )
                                 Spacer(Modifier.height(8.dp))
                             }
@@ -368,7 +370,8 @@ private fun Orb(
             Icon(
                 when {
                     voiceState == "speaking" -> Icons.Filled.GraphicEq
-                    running || voiceState == "thinking" -> Icons.Filled.Stop
+                    voiceState == "listening" || voiceState == "transcribing" ||
+                        running || voiceState == "thinking" -> Icons.Filled.Stop
                     else -> Icons.Filled.Mic
                 },
                 contentDescription = null,
@@ -476,7 +479,6 @@ private fun VoiceActions(
     onStop: () -> Unit,
 ) {
     val voiceState = state.voiceState
-    val listening = voiceState == "listening" || voiceState == "transcribing"
     if (state.manualCapture) {
         Spacer(Modifier.height(8.dp))
         Row(
@@ -499,10 +501,12 @@ private fun VoiceActions(
                 Text(stringResource(R.string.cancel))
             }
         }
-    } else if (listening || state.running || voiceState == "speaking") {
+    } else if (state.running || voiceState == "speaking") {
+        // Listening is stopped by tapping the orb itself (its icon turns into Stop),
+        // so the separate "stop listening" button is gone.
         Spacer(Modifier.height(8.dp))
         FilledTonalButton(
-            onClick = { if (listening) onStopListening() else onStop() },
+            onClick = onStop,
             modifier = Modifier.fillMaxWidth(if (landscape) 1f else 0.72f),
         ) {
             Icon(
@@ -511,13 +515,7 @@ private fun VoiceActions(
                 modifier = Modifier.size(20.dp),
             )
             Spacer(Modifier.size(8.dp))
-            Text(
-                if (listening) {
-                    stringResource(R.string.stop_listening)
-                } else {
-                    stringResource(R.string.interrupt)
-                },
-            )
+            Text(stringResource(R.string.interrupt))
         }
     }
 }

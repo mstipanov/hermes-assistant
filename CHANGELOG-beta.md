@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.51-beta1
+- Landscape is now built around the orb: it sits in the middle of the screen at full size, the status, mode switch and buttons are to its left, the last answer to its right.
+- While the microphone is listening (or the answer is being transcribed/thought about) the orb icon turns into a Stop symbol, so the separate "Stop listening" button is gone in both orientations.
+- Portrait keeps the same layout as before.
+
 ## 0.50-beta1
 - Landscape: the orb is large again — it keeps the portrait size instead of shrinking; status, mode switch and buttons sit in the column next to it, the last answer stays on the right.
 - The Send/Cancel buttons fit the narrower landscape column.

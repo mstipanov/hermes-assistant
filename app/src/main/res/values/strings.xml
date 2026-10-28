@@ -79,7 +79,6 @@
     <string name="cd_close">Close</string>
     <string name="replay_answer">Replay answer</string>
     <string name="replay">Replay</string>
-    <string name="stop_listening">Stop listening</string>
     <string name="interrupt">Interrupt</string>
     <string name="voice_reply">Voice reply</string>
     <string name="text_reply">Text reply</string>

@@ -79,7 +79,6 @@
     <string name="cd_close">Zatvori</string>
     <string name="replay_answer">Ponovi odgovor</string>
     <string name="replay">Ponovi</string>
-    <string name="stop_listening">Zaustavi slušanje</string>
     <string name="interrupt">Prekini</string>
     <string name="voice_reply">Glasovni odgovor</string>
     <string name="text_reply">Tekstualni odgovor</string>
