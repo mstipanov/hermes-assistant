@@ -48,6 +48,8 @@ import hr.sting.hermes.data.strOrNull
 import hr.sting.hermes.data.toClarifyQuestion
 import hr.sting.hermes.data.toChatMessage
 import hr.sting.hermes.data.toSessionRow
+import hr.sting.hermes.device.ActionPolicy
+import hr.sting.hermes.device.DeviceActionCatalog
 import hr.sting.hermes.device.DeviceActions
 import hr.sting.hermes.device.FileInbox
 import hr.sting.hermes.device.FileNotifier
@@ -136,17 +138,6 @@ class HermesController(private val app: Application) {
     private var turnWatchdogJob: Job? = null
     private var deviceConfirmJob: Job? = null
 
-    /** Actions that can touch the real world; the user confirms them by default. */
-    private val confirmableDeviceActions = setOf(
-        "call_contact",
-        "dial_number",
-        "send_sms",
-        "set_alarm",
-        "open_url",
-        "launch_app",
-        "play_music",
-        "media_control",
-    )
     private var autoListenJob: Job? = null
     private var awaitingAutoListen = false
     private var speakThisTurn = false
@@ -215,6 +206,7 @@ class HermesController(private val app: Application) {
             if (!speaking) maybeAutoListen()
         }
         androidTts.selectVoice(settingsStore.current.androidTtsVoice)
+        DeviceActions.speaker = { text -> speakText(text) }
         scope.launch {
             androidTts.voices.collect { voices ->
                 _ui.update { it.copy(androidTtsVoices = voices) }
@@ -1709,11 +1701,28 @@ class HermesController(private val app: Application) {
      * request is denied after 90 s so the server never waits forever.
      */
     private fun handleDeviceAction(request: GatewayRequest) {
-        val action = request.params.str("action").lowercase()
-        if (settingsStore.current.confirmDeviceActions &&
-            action in confirmableDeviceActions
-        ) {
-            _ui.value.deviceConfirm?.let { pending ->
+        val action = DeviceActionCatalog.canonical(request.params.str("action"))
+        when (DeviceActionCatalog.policy(settingsStore.current, action)) {
+            ActionPolicy.DENY -> {
+                rpc?.respond(
+                    request.id,
+                    jsonObject(
+                        "ok" to false,
+                        "error" to app.getString(R.string.action_denied_by_policy),
+                        "hint" to app.getString(R.string.action_denied_by_policy_hint),
+                    ),
+                )
+                return
+            }
+
+            ActionPolicy.ALLOW -> {
+                executeDeviceAction(request.id, request.params)
+                return
+            }
+
+            ActionPolicy.CONFIRM -> Unit
+        }
+        _ui.value.deviceConfirm?.let { pending ->
                 deviceConfirmJob?.cancel()
                 rpc?.respond(
                     pending.frameId,
@@ -1751,9 +1760,7 @@ class HermesController(private val app: Application) {
                     )
                 }
             }
-            return
-        }
-        executeDeviceAction(request.id, request.params)
+        return
     }
 
     private fun executeDeviceAction(frameId: String, params: JsonObject) {
@@ -1780,28 +1787,12 @@ class HermesController(private val app: Application) {
     }
 
     private fun describeDeviceAction(params: JsonObject): String {
-        val action = params.str("action").lowercase()
-        val number = params.str("number")
-        val contact = params.str("contact_name")
-        val target = when (action) {
-            "call_contact", "dial_number", "send_sms" -> contact.ifBlank { number }
-            "open_url" -> params.str("url")
-            "set_alarm" -> params.str("time")
-            "launch_app" -> params.str("app_name").ifBlank { params.str("query") }
-            "play_music" -> params.str("query").ifBlank { params.str("song") }
-            "media_control" -> params.str("command").ifBlank { "play_pause" }
-            else -> ""
-        }.trim()
-        val label = when (action) {
-            "call_contact", "dial_number" -> app.getString(R.string.device_action_call)
-            "send_sms" -> app.getString(R.string.device_action_sms)
-            "open_url" -> app.getString(R.string.device_action_open_link)
-            "set_alarm" -> app.getString(R.string.device_action_alarm)
-            "launch_app" -> app.getString(R.string.device_action_launch_app)
-            "play_music" -> app.getString(R.string.device_action_music)
-            "media_control" -> app.getString(R.string.device_action_media_control)
-            else -> action
-        }
+        val action = DeviceActionCatalog.canonical(params.str("action"))
+        val target = listOf(
+            "url", "query", "text", "name", "number", "contact_name", "app_name",
+            "time", "title", "path", "package", "destination", "address", "command",
+        ).firstNotNullOfOrNull { key -> params.str(key).trim().takeIf { it.isNotBlank() } }.orEmpty()
+        val label = DeviceActionCatalog.find(action)?.let { app.getString(it.labelRes) } ?: action
         return if (target.isBlank()) {
             label
         } else {
@@ -1979,6 +1970,22 @@ class HermesController(private val app: Application) {
     // ── Settings / onboarding ─────────────────────────────────────────────
 
     fun openSettings() = _ui.update { it.copy(showSettings = true) }
+
+    fun openActionPermissions() = _ui.update { it.copy(showActionPermissions = true) }
+
+    fun closeActionPermissions() = _ui.update { it.copy(showActionPermissions = false) }
+
+    /** Persist one row of the Allow/Confirm/Deny matrix. */
+    fun setActionPolicy(action: String, policy: String) {
+        val canonical = DeviceActionCatalog.canonical(action)
+        val wire = ActionPolicy.fromWire(policy)?.wire ?: return
+        val updated = settingsStore.current.copy(
+            actionPolicies = settingsStore.current.actionPolicies + (canonical to wire),
+        )
+        settingsStore.save(updated)
+        _ui.update { it.copy(settings = updated) }
+        AppLog.add("action policy: $canonical=$wire")
+    }
 
     fun closeSettings() = _ui.update { it.copy(showSettings = false) }
 

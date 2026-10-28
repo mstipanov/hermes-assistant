@@ -81,6 +81,7 @@ fun SettingsScreen(
     onTestTts: () -> Unit,
     onCheckUpdate: () -> Unit,
     onInstallUpdate: () -> Unit,
+    onOpenActionPermissions: () -> Unit,
 ) {
     val settings = state.settings
     var draft by remember(settings) { mutableStateOf(settings) }
@@ -324,6 +325,9 @@ fun SettingsScreen(
                     onApplyVoice(updated)
                 },
             )
+            TextButton(onClick = onOpenActionPermissions) {
+                Text(stringResource(R.string.action_permissions_entry))
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = { contactsLauncher.launch(Manifest.permission.READ_CONTACTS) },

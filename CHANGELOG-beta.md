@@ -3,6 +3,12 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.52-beta1
+- New **Settings → Action permissions** matrix: every device action can be set to **Allow** (silent), **Confirm** (asks first) or **Deny**, plus one place to grant the Android access the actions need (contacts, phone, SMS, calendar, location, notifications, Do Not Disturb, system settings).
+- Hermes can now use 37 device actions: send/read SMS, dial and direct calls, contacts, timers, alarms, navigation and maps, web search, text sharing, voice command, vibration, flashlight, speaking, device status, media and volume, calendar read/add, saving and opening files, clipboard read/write, notifications, location, Do Not Disturb, ringer, brightness, screen capture and more.
+- Sensitive actions (calls, SMS, calendar writes, location, DND, brightness, notifications, clipboard, screen capture) ask for confirmation by default; the old "Confirm device actions" switch still works as a master fallback.
+- Screen capture uses Android's own consent dialog every time and saves the PNG into Pictures/Hermes.
+
 ## 0.51-beta1
 - Landscape is now built around the orb: it sits in the middle of the screen at full size, the status, mode switch and buttons are to its left, the last answer to its right.
 - While the microphone is listening (or the answer is being transcribed/thought about) the orb icon turns into a Stop symbol, so the separate "Stop listening" button is gone in both orientations.

@@ -20,6 +20,8 @@ data class AppSettings(
     val handsFree: Boolean = false,
     val wakeWordEnabled: Boolean = false,
     val confirmDeviceActions: Boolean = true,
+    /** Per-action override: action id -> allow / confirm / deny. */
+    val actionPolicies: Map<String, String> = emptyMap(),
     val shareTelegramSession: Boolean = true,
     val listenOnOpen: Boolean = false,
     val defaultView: String = "voice",

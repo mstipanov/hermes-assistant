@@ -14,6 +14,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import hr.sting.hermes.ui.ActionPermissionsScreen
 import hr.sting.hermes.ui.AudioOnlyScreen
 import hr.sting.hermes.ui.ChatScreen
 import hr.sting.hermes.ui.HermesTheme
@@ -72,6 +73,12 @@ class MainActivity : ComponentActivity() {
                 }
 
                 when {
+                    state.showActionPermissions -> ActionPermissionsScreen(
+                        state = state,
+                        onBack = core::closeActionPermissions,
+                        onPolicy = core::setActionPolicy,
+                    )
+
                     state.showOnboarding -> OnboardingScreen(
                         state = state,
                         onTest = core::testConnection,
@@ -91,6 +98,7 @@ class MainActivity : ComponentActivity() {
                         onTestTts = core::testTts,
                         onCheckUpdate = core::checkForUpdates,
                         onInstallUpdate = core::installUpdate,
+                        onOpenActionPermissions = core::openActionPermissions,
                     )
 
                     mode == "chat" -> ChatScreen(
