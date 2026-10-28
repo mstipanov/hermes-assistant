@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.49-beta1
+- The microphone mode switch (Automatic / Start–stop) is now on the main voice screen, right under the status, so it can be changed on the fly without opening Settings.
+- New landscape layout for the voice screen: orb, status and the mode switch on the left, the last answer and any error/approval cards on the right — nothing gets cut off or hidden in landscape any more.
+- The choice is remembered and applies to the big orb, the chat mic, "Hey Hermes", the Quick Settings tile and the assistant key.
+
 ## 0.48-beta1
 - New microphone mode in Settings → Microphone: **Automatic** (as before — recording ends after a short pause) and **Start–stop** (recording keeps going until you tap the big orb again, then it is sent). Start–stop uses the local recorder and Hermes STT, so a pause to think can never cut the sentence in half.
 - In Start–stop mode the orb shows "Recording…" with a Send/Cancel pair, and while a capture is running the mic/orb tap finishes it instead of discarding it.

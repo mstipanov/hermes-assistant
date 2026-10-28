@@ -795,6 +795,16 @@ class HermesController(private val app: Application) {
         uiMode = mode
     }
 
+    /** Switch auto/start-stop from the main screen, without opening Settings. */
+    fun setMicMode(manual: Boolean) {
+        val mode = if (manual) "manual" else "auto"
+        if (_ui.value.settings.micMode == mode) return
+        val updated = settingsStore.current.copy(micMode = mode)
+        settingsStore.save(updated)
+        _ui.update { it.copy(settings = updated) }
+        AppLog.add("mic mode: $mode")
+    }
+
     fun startVoice() {
         awaitingAutoListen = false
         autoListenJob?.cancel()

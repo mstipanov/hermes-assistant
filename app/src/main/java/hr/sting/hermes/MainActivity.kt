@@ -141,6 +141,7 @@ class MainActivity : ComponentActivity() {
                         onOpenSettings = core::openSettings,
                         onConnect = core::connect,
                         onFinishVoice = core::finishVoice,
+                        onMicModeChange = core::setMicMode,
                         onApprove = core::approve,
                         onConfirmDeviceAction = core::confirmDeviceAction,
                         onClearMessage = core::clearError,
