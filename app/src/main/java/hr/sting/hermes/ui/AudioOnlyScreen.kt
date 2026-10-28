@@ -12,6 +12,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +24,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
@@ -152,60 +154,77 @@ fun AudioOnlyScreen(
                 ScreenHeader(state, onOpenChat, onOpenSettings)
 
                 if (landscape) {
-                    Row(
+                    BoxWithConstraints(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {                        Column(
-                            modifier = Modifier.weight(0.9f),
-                            horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        // Landscape has little height, so the orb gets its own column and
+                        // stays as large as the screen allows (up to the portrait size);
+                        // status, mode switch and buttons sit next to it.
+                        val orbSize = (maxHeight * 0.9f).coerceIn(96.dp, 238.dp)
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Orb(
-                                active = active,
-                                pulse = pulse,
-                                voiceState = voiceState,
-                                running = state.running,
-                                size = 122.dp,
-                                onOrb = onOrb,
-                            )
-                            Spacer(Modifier.height(8.dp))
-                            StatusBlock(status, hint, compact = true)
-                            PartialTranscript(state, voiceState, maxLines = 1)
-                            ReplayLast(lastReply, state.lastTurnFromVoice, voiceState, onSpeakLast)
-                            ModeToggle(manualMode, onMicModeChange)
-                            VoiceActions(
-                                state = state,
-                                landscape = true,
-                                onFinishVoice = onFinishVoice,
-                                onStopListening = onStopListening,
-                                onStop = onStop,
-                            )
-                        }
-                        Column(
-                            modifier = Modifier
-                                .weight(1.1f)
-                                .fillMaxHeight()
-                                .padding(start = 16.dp)
-                                .verticalScroll(rememberScrollState()),
-                        ) {
-                            Spacer(Modifier.height(8.dp))
-                            LastReplyCard(
-                                reply = lastReply,
-                                fromVoice = state.lastTurnFromVoice,
-                                maxLines = 4,
-                                onSpeakLast = onSpeakLast,
-                                onOpenChat = onOpenChat,
-                            )
-                            BottomNotices(
-                                state = state,
-                                onApprove = onApprove,
-                                onConfirmDeviceAction = onConfirmDeviceAction,
-                                onOpenChat = onOpenChat,
-                                onConnect = onConnect,
-                                onClearMessage = onClearMessage,
-                            )
-                            Spacer(Modifier.height(8.dp))
+                            Box(
+                                modifier = Modifier
+                                    .width(orbSize + 12.dp)
+                                    .fillMaxHeight(),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Orb(
+                                    active = active,
+                                    pulse = pulse,
+                                    voiceState = voiceState,
+                                    running = state.running,
+                                    size = orbSize,
+                                    onOrb = onOrb,
+                                )
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .weight(0.8f)
+                                    .fillMaxHeight(),
+                                verticalArrangement = Arrangement.Center,
+                            ) {
+                                StatusBlock(status, hint, compact = true)
+                                PartialTranscript(state, voiceState, maxLines = 1)
+                                ReplayLast(lastReply, state.lastTurnFromVoice, voiceState, onSpeakLast)
+                                ModeToggle(manualMode, onMicModeChange)
+                                VoiceActions(
+                                    state = state,
+                                    landscape = true,
+                                    onFinishVoice = onFinishVoice,
+                                    onStopListening = onStopListening,
+                                    onStop = onStop,
+                                )
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .padding(start = 12.dp)
+                                    .verticalScroll(rememberScrollState()),
+                            ) {
+                                Spacer(Modifier.height(8.dp))
+                                LastReplyCard(
+                                    reply = lastReply,
+                                    fromVoice = state.lastTurnFromVoice,
+                                    maxLines = 4,
+                                    onSpeakLast = onSpeakLast,
+                                    onOpenChat = onOpenChat,
+                                )
+                                BottomNotices(
+                                    state = state,
+                                    onApprove = onApprove,
+                                    onConfirmDeviceAction = onConfirmDeviceAction,
+                                    onOpenChat = onOpenChat,
+                                    onConnect = onConnect,
+                                    onClearMessage = onClearMessage,
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
                         }
                     }
                 } else {
@@ -466,12 +485,14 @@ private fun VoiceActions(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             FilledTonalButton(onClick = onFinishVoice, modifier = Modifier.weight(1f)) {
-                Icon(
-                    Icons.Filled.Send,
-                    contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                )
-                Spacer(Modifier.size(8.dp))
+                if (!landscape) {
+                    Icon(
+                        Icons.Filled.Send,
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Spacer(Modifier.size(8.dp))
+                }
                 Text(stringResource(R.string.send))
             }
             TextButton(onClick = onStopListening) {
@@ -482,7 +503,7 @@ private fun VoiceActions(
         Spacer(Modifier.height(8.dp))
         FilledTonalButton(
             onClick = { if (listening) onStopListening() else onStop() },
-            modifier = Modifier.fillMaxWidth(if (landscape) 0.8f else 0.72f),
+            modifier = Modifier.fillMaxWidth(if (landscape) 1f else 0.72f),
         ) {
             Icon(
                 Icons.Filled.Stop,

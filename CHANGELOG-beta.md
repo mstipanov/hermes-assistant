@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.50-beta1
+- Landscape: the orb is large again — it keeps the portrait size instead of shrinking; status, mode switch and buttons sit in the column next to it, the last answer stays on the right.
+- The Send/Cancel buttons fit the narrower landscape column.
+
 ## 0.49-beta1
 - The microphone mode switch (Automatic / Start–stop) is now on the main voice screen, right under the status, so it can be changed on the fly without opening Settings.
 - New landscape layout for the voice screen: orb, status and the mode switch on the left, the last answer and any error/approval cards on the right — nothing gets cut off or hidden in landscape any more.
