@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.53-beta1
+- Fixed the "Modify system settings" permission being greyed out on Android: the app was missing the `WRITE_SETTINGS` declaration, so the brightness action could never be enabled. Added `ACCESS_NOTIFICATION_POLICY` for Do Not Disturb too.
+
 ## 0.52-beta1
 - New **Settings → Action permissions** matrix: every device action can be set to **Allow** (silent), **Confirm** (asks first) or **Deny**, plus one place to grant the Android access the actions need (contacts, phone, SMS, calendar, location, notifications, Do Not Disturb, system settings).
 - Hermes can now use 37 device actions: send/read SMS, dial and direct calls, contacts, timers, alarms, navigation and maps, web search, text sharing, voice command, vibration, flashlight, speaking, device status, media and volume, calendar read/add, saving and opening files, clipboard read/write, notifications, location, Do Not Disturb, ringer, brightness, screen capture and more.
