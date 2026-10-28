@@ -25,6 +25,8 @@ data class AppSettings(
     val defaultView: String = "voice",
     val continuousVoice: Boolean = true,
     val sttEngine: String = "google",
+    /** "auto" ends the capture after a pause; "manual" records until the user taps again. */
+    val micMode: String = "auto",
     val ttsEngine: String = "android",
     val androidTtsVoice: String? = null,
     val hasCompletedOnboarding: Boolean = false,

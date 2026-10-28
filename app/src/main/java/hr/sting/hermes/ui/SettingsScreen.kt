@@ -421,6 +421,37 @@ fun SettingsScreen(
             }
 
             Text(
+                stringResource(R.string.capture_section),
+                style = MaterialTheme.typography.titleSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = draft.micMode != "manual",
+                    onClick = {
+                        val updated = draft.copy(micMode = "auto")
+                        draft = updated
+                        onApplyVoice(updated)
+                    },
+                    label = { Text(stringResource(R.string.capture_auto)) },
+                )
+                FilterChip(
+                    selected = draft.micMode == "manual",
+                    onClick = {
+                        val updated = draft.copy(micMode = "manual")
+                        draft = updated
+                        onApplyVoice(updated)
+                    },
+                    label = { Text(stringResource(R.string.capture_manual)) },
+                )
+            }
+            Text(
+                stringResource(R.string.capture_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+
+            Text(
                 stringResource(R.string.voice_section),
                 style = MaterialTheme.typography.titleSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -855,6 +886,7 @@ fun SettingsScreen(
                     appendLine("android_tts_voice=${draft.androidTtsVoice ?: "default"}")
                     appendLine("default_view=${draft.defaultView}")
                     appendLine("continuous_voice=${draft.continuousVoice}")
+                    appendLine("mic_mode=${draft.micMode}")
                     appendLine("voice=$voiceDiag")
                     appendLine("--- rpc log ---")
                     appendLine(appLog.takeLast(30).joinToString("\n"))

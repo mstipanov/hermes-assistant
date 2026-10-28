@@ -114,6 +114,7 @@ fun ChatScreen(
     onSend: () -> Unit,
     onStop: () -> Unit,
     onMic: () -> Unit,
+    onFinishVoice: () -> Unit,
     onApprove: (String) -> Unit,
     onConfirmDeviceAction: (Boolean) -> Unit,
     onClarify: (Map<String, String?>) -> Unit,
@@ -349,7 +350,9 @@ fun ChatScreen(
 
                 VoicePanel(
                     voiceState = state.voiceState,
+                    manual = state.manualCapture,
                     onCancel = onStop,
+                    onFinish = onFinishVoice,
                 )
 
                 state.error?.let { error ->
@@ -380,7 +383,11 @@ fun ChatScreen(
                     onSend = onSend,
                     onStop = onStop,
                     onMic = {
-                        if (state.voiceState == "idle") micAction() else onStop()
+                        when {
+                            state.voiceState == "idle" -> micAction()
+                            state.manualCapture -> onFinishVoice()
+                            else -> onStop()
+                        }
                     },
                     focusRequester = inputFocus,
                     onCamera = {
@@ -643,10 +650,17 @@ private fun ErrorBanner(error: String, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun VoicePanel(voiceState: String, onCancel: () -> Unit) {
+private fun VoicePanel(
+    voiceState: String,
+    manual: Boolean,
+    onCancel: () -> Unit,
+    onFinish: () -> Unit,
+) {
     if (voiceState == "idle") return
     val (label, active) = when (voiceState) {
-        "listening" -> stringResource(R.string.status_listening) to true
+        "listening" -> stringResource(
+            if (manual) R.string.status_recording else R.string.status_listening,
+        ) to true
         "transcribing" -> stringResource(R.string.status_transcribing) to true
         "thinking" -> stringResource(R.string.status_thinking) to true
         "speaking" -> stringResource(R.string.status_speaking) to false
@@ -679,14 +693,19 @@ private fun VoicePanel(voiceState: String, onCancel: () -> Unit) {
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(1f),
             )
-            TextButton(onClick = onCancel) {
-                Text(
-                    if (voiceState == "speaking") {
-                        stringResource(R.string.interrupt)
-                    } else {
-                        stringResource(R.string.cancel)
-                    },
-                )
+            if (manual && voiceState == "listening") {
+                TextButton(onClick = onFinish) { Text(stringResource(R.string.send)) }
+                TextButton(onClick = onCancel) { Text(stringResource(R.string.cancel)) }
+            } else {
+                TextButton(onClick = onCancel) {
+                    Text(
+                        if (voiceState == "speaking") {
+                            stringResource(R.string.interrupt)
+                        } else {
+                            stringResource(R.string.cancel)
+                        },
+                    )
+                }
             }
         }
     }

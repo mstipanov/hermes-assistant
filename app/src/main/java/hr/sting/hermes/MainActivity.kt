@@ -103,6 +103,7 @@ class MainActivity : ComponentActivity() {
                         onSend = { core.sendMessage() },
                         onStop = core::interrupt,
                         onMic = core::startVoice,
+                        onFinishVoice = core::finishVoice,
                         onApprove = core::approve,
                         onConfirmDeviceAction = core::confirmDeviceAction,
                         onClarify = core::answerClarify,
@@ -122,9 +123,14 @@ class MainActivity : ComponentActivity() {
                     else -> AudioOnlyScreen(
                         state = state,
                         onOrb = {
-                            when (state.voiceState) {
-                                "idle" -> core.startVoice()
-                                "listening", "transcribing" -> core.stopVoice()
+                            when {
+                                state.voiceState == "listening" && state.manualCapture ->
+                                    core.finishVoice()
+
+                                state.voiceState == "listening" ||
+                                    state.voiceState == "transcribing" -> core.stopVoice()
+
+                                state.voiceState == "idle" -> core.startVoice()
                                 else -> core.interrupt()
                             }
                         },
@@ -134,6 +140,7 @@ class MainActivity : ComponentActivity() {
                         onOpenChat = { mode = "chat" },
                         onOpenSettings = core::openSettings,
                         onConnect = core::connect,
+                        onFinishVoice = core::finishVoice,
                         onApprove = core::approve,
                         onConfirmDeviceAction = core::confirmDeviceAction,
                         onClearMessage = core::clearError,

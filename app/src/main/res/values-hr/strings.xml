@@ -63,6 +63,8 @@
     <string name="hint_check_settings">Provjeri vezu u Postavkama</string>
     <string name="status_listening">Slušam…</string>
     <string name="hint_tap_to_stop">Dodirni orb da prekineš</string>
+    <string name="status_recording">Snimam…</string>
+    <string name="hint_tap_to_finish">Ponovno tapni orb kad završiš</string>
     <string name="status_transcribing">Prepoznajem govor…</string>
     <string name="status_thinking">Hermes razmišlja…</string>
     <string name="status_speaking">Hermes govori…</string>
@@ -164,6 +166,10 @@
     <string name="hermes_server_private">Hermes server (privatno)</string>
     <string name="stt_desc">Google koristi isti recognition servis kao Gboard i mnogo je brži. Audio ide Googleu. Hermes server šalje snimku na tvoj Mac (Whisper medium) — privatnije, ali sporije.</string>
     <string name="open_speech_settings">Otvori postavke prepoznavanja govora</string>
+    <string name="capture_section">Mikrofon</string>
+    <string name="capture_auto">Automatski</string>
+    <string name="capture_manual">Start–stop</string>
+    <string name="capture_desc">Automatski prekida snimanje nakon kratke stanke. Start–stop snima dok ponovno ne tapneš veliki gumb, pa snimku šalje na Hermes STT.</string>
     <string name="voice_section">Glas</string>
     <string name="continue_listening">Nastavi slušati nakon odgovora</string>
     <string name="continue_listening_desc">Nakon što Hermes završi odgovor, odmah ponovno otvori mikrofon za sljedeće pitanje.</string>

@@ -63,6 +63,8 @@
     <string name="hint_check_settings">Check the connection in Settings</string>
     <string name="status_listening">Listening…</string>
     <string name="hint_tap_to_stop">Tap the orb to stop</string>
+    <string name="status_recording">Recording…</string>
+    <string name="hint_tap_to_finish">Tap the orb again when you are done</string>
     <string name="status_transcribing">Recognizing speech…</string>
     <string name="status_thinking">Hermes is thinking…</string>
     <string name="status_speaking">Hermes is speaking…</string>
@@ -163,6 +165,10 @@
     <string name="hermes_server_private">Hermes server (private)</string>
     <string name="stt_desc">Google uses the same recognition service as Gboard and is much faster. Audio goes to Google. Hermes server sends the recording to your Mac (Whisper medium) — more private, but slower.</string>
     <string name="open_speech_settings">Open speech recognition settings</string>
+    <string name="capture_section">Microphone</string>
+    <string name="capture_auto">Automatic</string>
+    <string name="capture_manual">Start–stop</string>
+    <string name="capture_desc">Automatic ends the recording after a short pause. Start–stop keeps recording until you tap the big button again, then sends the audio to Hermes STT.</string>
     <string name="voice_section">Voice</string>
     <string name="continue_listening">Keep listening after the answer</string>
     <string name="continue_listening_desc">After Hermes finishes an answer, immediately reopen the microphone for the next question.</string>

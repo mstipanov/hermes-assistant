@@ -143,6 +143,8 @@ data class HermesUiState(
     val onboardingResult: String? = null,
     val onboardingOk: Boolean = false,
     val voiceState: String = "idle",
+    /** True while a start-stop capture is recording; the next tap finishes it. */
+    val manualCapture: Boolean = false,
     val lastTurnFromVoice: Boolean = false,
     val partialTranscript: String = "",
     val pendingAttachments: List<PendingAttachment> = emptyList(),

@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.48-beta1
+- New microphone mode in Settings → Microphone: **Automatic** (as before — recording ends after a short pause) and **Start–stop** (recording keeps going until you tap the big orb again, then it is sent). Start–stop uses the local recorder and Hermes STT, so a pause to think can never cut the sentence in half.
+- In Start–stop mode the orb shows "Recording…" with a Send/Cancel pair, and while a capture is running the mic/orb tap finishes it instead of discarding it.
+- Continuous listening is skipped in Start–stop mode — the microphone never re-opens by itself.
+
 ## 0.47-beta1
 - The app now has a real beta channel: "Check for updates" in a beta build finds new betas and installs them from hermes-beta.sting.hr. Stable builds keep checking the stable channel only.
 - The first start after a reboot or an app update retries the connection by itself — and reconnects as soon as the network is back — instead of staying offline until "Connect" is tapped.

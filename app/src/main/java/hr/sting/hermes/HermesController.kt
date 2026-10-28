@@ -808,7 +808,13 @@ class HermesController(private val app: Application) {
             // Rotation / launch intent: never start the mic over the TTS.
             return
         }
-        if (_ui.value.voiceState == "listening" || _ui.value.voiceState == "transcribing") {
+        if (_ui.value.voiceState == "listening") {
+            // In start-stop mode the second tap finishes the utterance; in auto
+            // mode it discards the capture, as before.
+            if (_ui.value.manualCapture) finishVoice() else stopVoice()
+            return
+        }
+        if (_ui.value.voiceState == "transcribing") {
             stopVoice()
             return
         }
@@ -826,11 +832,24 @@ class HermesController(private val app: Application) {
             }
             return
         }
-        if (_ui.value.settings.sttEngine == "google" && androidStt.isAvailable()) {
+        val manual = _ui.value.settings.micMode == "manual"
+        if (!manual && _ui.value.settings.sttEngine == "google" && androidStt.isAvailable()) {
             startVoiceGoogle()
         } else {
-            startVoiceServer()
+            startVoiceServer(manual)
         }
+    }
+
+    /**
+     * Start-stop mode: the local recorder runs without VAD and the second tap
+     * ([finishVoice]) ends it. Google's recognizer endpoints on its own schedule
+     * and ignores the silence extras, so it cannot hold the mic open.
+     */
+    fun finishVoice() {
+        if (_ui.value.voiceState != "listening" || !_ui.value.manualCapture) return
+        AppLog.add("voice: manual stop")
+        _ui.update { it.copy(voiceState = "transcribing", manualCapture = false) }
+        recorder.finish()
     }
 
     private fun startVoiceGoogle() {
@@ -851,17 +870,28 @@ class HermesController(private val app: Application) {
         }
     }
 
-    private fun startVoiceServer() {
+    private fun startVoiceServer(manual: Boolean = false) {
         if (voiceJob?.isActive == true) return
         voiceJob = scope.launch {
-            _ui.update { it.copy(voiceState = "listening", error = null, notice = null) }
+            _ui.update {
+                it.copy(
+                    voiceState = "listening",
+                    manualCapture = manual,
+                    partialTranscript = "",
+                    error = null,
+                    notice = null,
+                )
+            }
             try {
-                val wav = recorder.record()
+                val wav = recorder.record(
+                    maxDurationMs = if (manual) 60_000 else 30_000,
+                    manual = manual,
+                )
                 if (wav.size <= 44) {
-                    _ui.update { it.copy(voiceState = "idle") }
+                    _ui.update { it.copy(voiceState = "idle", manualCapture = false) }
                     return@launch
                 }
-                _ui.update { it.copy(voiceState = "transcribing") }
+                _ui.update { it.copy(voiceState = "transcribing", manualCapture = false) }
                 val client = rest ?: return@launch
                 val transcript = client.transcribe(wav).trim()
                 if (transcript.isBlank()) {
@@ -875,11 +905,11 @@ class HermesController(private val app: Application) {
                 }
                 sendMessage(transcript, fromVoice = true)
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
-                _ui.update { it.copy(voiceState = "idle") }
+                _ui.update { it.copy(voiceState = "idle", manualCapture = false) }
                 throw cancelled
             } catch (error: Exception) {
                 _ui.update {
-                    it.copy(voiceState = "idle", error = humanError(error))
+                    it.copy(voiceState = "idle", manualCapture = false, error = humanError(error))
                 }
             }
         }
@@ -890,7 +920,7 @@ class HermesController(private val app: Application) {
         recorder.cancel()
         voiceJob?.cancel()
         voiceJob = null
-        _ui.update { it.copy(voiceState = "idle", partialTranscript = "") }
+        _ui.update { it.copy(voiceState = "idle", manualCapture = false, partialTranscript = "") }
     }
 
     /** Manual "read this aloud" / TTS test; independent of the current turn. */
@@ -1081,6 +1111,8 @@ class HermesController(private val app: Application) {
     private fun maybeAutoListen() {
         if (!awaitingAutoListen) return
         if (!_ui.value.settings.continuousVoice) return
+        // Start-stop means the user decides when the mic closes; never re-open it by itself.
+        if (_ui.value.settings.micMode == "manual") return
         if (uiMode != "voice") return
         if (_ui.value.running) return
         if (_ui.value.approval != null || _ui.value.clarify != null) return

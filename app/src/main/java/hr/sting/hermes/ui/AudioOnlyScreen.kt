@@ -27,6 +27,7 @@ import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
 import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material.icons.filled.VolumeUp
@@ -72,6 +73,7 @@ fun AudioOnlyScreen(
     onOpenChat: () -> Unit,
     onOpenSettings: () -> Unit,
     onConnect: () -> Unit,
+    onFinishVoice: () -> Unit,
     onApprove: (String) -> Unit,
     onConfirmDeviceAction: (Boolean) -> Unit,
     onClearMessage: () -> Unit,
@@ -94,6 +96,10 @@ fun AudioOnlyScreen(
     val (status, hint) = when {
         state.link !is LinkState.Ready -> stringResource(R.string.status_not_connected) to
             stringResource(R.string.hint_check_settings)
+
+        voiceState == "listening" && state.manualCapture ->
+            stringResource(R.string.status_recording) to
+                stringResource(R.string.hint_tap_to_finish)
 
         voiceState == "listening" -> stringResource(R.string.status_listening) to
             stringResource(R.string.hint_tap_to_stop)
@@ -254,7 +260,27 @@ fun AudioOnlyScreen(
             }
 
             val listening = voiceState == "listening" || voiceState == "transcribing"
-            if (listening || state.running || voiceState == "speaking") {
+            if (state.manualCapture) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(0.92f),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    FilledTonalButton(onClick = onFinishVoice, modifier = Modifier.weight(1f)) {
+                        Icon(
+                            Icons.Filled.Send,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp),
+                        )
+                        Spacer(Modifier.size(8.dp))
+                        Text(stringResource(R.string.send))
+                    }
+                    TextButton(onClick = onStopListening) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                }
+            } else if (listening || state.running || voiceState == "speaking") {
                 Spacer(Modifier.height(8.dp))
                 FilledTonalButton(
                     onClick = { if (listening) onStopListening() else onStop() },

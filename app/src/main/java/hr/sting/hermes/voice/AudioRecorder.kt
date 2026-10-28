@@ -27,6 +27,7 @@ class AudioRecorder(private val context: Context) {
     val amplitude: StateFlow<Float> = _amplitude.asStateFlow()
 
     @Volatile private var cancelled = false
+    @Volatile private var stopRequested = false
     private var activeRecord: AudioRecord? = null
 
     @SuppressLint("MissingPermission")
@@ -34,8 +35,11 @@ class AudioRecorder(private val context: Context) {
         maxDurationMs: Long = 30_000,
         silenceWindowMs: Long = 1_600,
         minDurationMs: Long = 900,
+        /** Start-stop mode: keep recording (no VAD) until [finish] is called. */
+        manual: Boolean = false,
     ): ByteArray = withContext(Dispatchers.IO) {
         cancelled = false
+        stopRequested = false
         val sampleRate = 16_000
         val minBuffer = AudioRecord.getMinBufferSize(
             sampleRate,
@@ -67,7 +71,7 @@ class AudioRecorder(private val context: Context) {
         var threshold = 0.012
         try {
             record.startRecording()
-            while (isActive && !cancelled) {
+            while (isActive && !cancelled && !stopRequested) {
                 val read = record.read(buffer, 0, buffer.size)
                 if (read <= 0) continue
                 val bytes = ByteArray(read * 2)
@@ -100,8 +104,16 @@ class AudioRecorder(private val context: Context) {
                     lastVoiceAt = now
                 }
                 if (elapsed >= maxDurationMs) break
-                if (!heardVoice && elapsed >= 8_000) break
-                if (heardVoice && elapsed >= minDurationMs && now - lastVoiceAt >= silenceWindowMs) break
+                // Start-stop mode: only the user's second tap ends the utterance,
+                // so a pause to think never cuts the sentence in half.
+                if (!manual) {
+                    if (!heardVoice && elapsed >= 8_000) break
+                    if (heardVoice && elapsed >= minDurationMs &&
+                        now - lastVoiceAt >= silenceWindowMs
+                    ) {
+                        break
+                    }
+                }
             }
         } finally {
             runCatching { record.stop() }
@@ -157,6 +169,11 @@ class AudioRecorder(private val context: Context) {
             _amplitude.value = 0f
         }
         WavCodec.wrapPcm(output.toByteArray(), sampleRate)
+    }
+
+    /** Ends a start-stop capture and keeps the audio (unlike [cancel], which discards it). */
+    fun finish() {
+        stopRequested = true
     }
 
     fun cancel() {
