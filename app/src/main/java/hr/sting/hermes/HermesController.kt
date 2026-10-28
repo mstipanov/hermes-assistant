@@ -4,6 +4,9 @@ import android.Manifest
 import android.app.Application
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.provider.Settings
 import android.util.Base64
@@ -62,16 +65,20 @@ import hr.sting.hermes.voice.WakeWordDetector
 import hr.sting.hermes.util.AppLog
 import hr.sting.hermes.util.Updater
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.JsonPrimitive
@@ -82,9 +89,11 @@ import okhttp3.Request
 import okhttp3.Response
 import okhttp3.WebSocket
 import okhttp3.WebSocketListener
+import java.io.IOException
 import java.nio.ByteBuffer
 import java.nio.ByteOrder
 import java.util.UUID
+import javax.net.ssl.SSLException
 
 class HermesController(private val app: Application) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -110,6 +119,11 @@ class HermesController(private val app: Application) {
     private var rest: HermesRest? = null
     private var rpc: HermesRpc? = null
     private var connectJob: Job? = null
+    private val connectivity = app.getSystemService(ConnectivityManager::class.java)
+
+    /** Wakes the connect retry loop as soon as Android brings a network back. */
+    private val networkSignal = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private val collectors = mutableListOf<Job>()
     private var sessionsLoaded = false
     private var wasReady = false
@@ -207,6 +221,7 @@ class HermesController(private val app: Application) {
             }
         }
         val settings = settingsStore.current
+        watchNetwork()
         if (settings.isConfigured && settings.hasCompletedOnboarding) {
             connect()
             if (settings.handsFree) HermesService.start(app)
@@ -215,6 +230,13 @@ class HermesController(private val app: Application) {
 
     // ── Connection ─────────────────────────────────────────────────────────
 
+    /**
+     * Resolves the server, authenticates and opens the gateway. A single failed
+     * attempt used to leave the app offline until the user tapped "Connect":
+     * right after boot, or right after an app update, Android often starts the
+     * process before DNS and the mobile network are up. Transient failures are
+     * retried with backoff, and a returning network starts the attempt at once.
+     */
     fun connect() {
         connectJob?.cancel()
         connectJob = scope.launch {
@@ -231,37 +253,107 @@ class HermesController(private val app: Application) {
                     notice = null,
                 )
             }
-            try {
-                AppLog.add("connect: ${settings.serverUrl}")
-                val newRest = HermesRest(app, settings)
-                newRest.ensureAuthenticated()
-                AppLog.add("auth ok")
-                val me = newRest.me()
-                rest = newRest
-                val newRpc = HermesRpc(newRest, app, scope)
-                rpc = newRpc
-                observeRpc(newRpc)
-                newRpc.start()
-                _ui.update {
-                    it.copy(
-                        account = me.str("user_id").ifBlank { settings.username },
-                        showOnboarding = false,
-                        configured = true,
+            var attempt = 0
+            while (true) {
+                attempt++
+                try {
+                    AppLog.add("connect: ${settings.serverUrl} (attempt $attempt)")
+                    val newRest = HermesRest(app, settings)
+                    newRest.ensureAuthenticated()
+                    AppLog.add("auth ok")
+                    val me = newRest.me()
+                    rest = newRest
+                    val newRpc = HermesRpc(newRest, app, scope)
+                    rpc = newRpc
+                    observeRpc(newRpc)
+                    newRpc.start()
+                    _ui.update {
+                        it.copy(
+                            account = me.str("user_id").ifBlank { settings.username },
+                            showOnboarding = false,
+                            configured = true,
+                        )
+                    }
+                    return@launch
+                } catch (cancelled: CancellationException) {
+                    throw cancelled
+                } catch (error: Exception) {
+                    val transient = isTransient(error)
+                    val message = if (transient) {
+                        app.getString(R.string.connect_failed_network)
+                    } else {
+                        humanError(error)
+                    }
+                    AppLog.add(
+                        "connect attempt $attempt failed: " +
+                            "${humanError(error)} (transient=$transient)",
                     )
-                }
-            } catch (error: Exception) {
-                val message = humanError(error)
-                AppLog.add("connect failed: $message")
-                _ui.update {
-                    it.copy(
-                        link = LinkState.Failed(message),
-                        error = message,
-                        showOnboarding = !it.settings.hasCompletedOnboarding,
-                    )
+                    if (!transient || attempt >= MAX_CONNECT_ATTEMPTS) {
+                        _ui.update {
+                            it.copy(
+                                link = LinkState.Failed(message),
+                                error = message,
+                                showOnboarding = !it.settings.hasCompletedOnboarding,
+                            )
+                        }
+                        return@launch
+                    }
+                    _ui.update { it.copy(link = LinkState.Connecting, error = null) }
+                    withTimeoutOrNull(retryDelay(attempt)) { networkSignal.first() }
                 }
             }
         }
     }
+
+    /**
+     * After boot and after an app update the system binds our services while DNS
+     * still answers "no address associated with hostname". Retrying for about two
+     * minutes covers DNS coming up; afterwards a returning network triggers a new
+     * attempt instead of making the user tap "Connect".
+     */
+    private fun watchNetwork() {
+        val manager = connectivity ?: return
+        val callback = object : ConnectivityManager.NetworkCallback() {
+            override fun onAvailable(network: Network) {
+                networkSignal.tryEmit(Unit)
+                scope.launch { reconnectIfOffline() }
+            }
+
+            override fun onCapabilitiesChanged(
+                network: Network,
+                capabilities: NetworkCapabilities,
+            ) {
+                if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)) {
+                    return
+                }
+                networkSignal.tryEmit(Unit)
+                scope.launch { reconnectIfOffline() }
+            }
+        }
+        networkCallback = callback
+        runCatching { manager.registerDefaultNetworkCallback(callback) }
+            .onFailure { AppLog.add("network callback failed: ${it.message}") }
+    }
+
+    private fun reconnectIfOffline() {
+        val state = _ui.value
+        if (!state.settings.isConfigured || !state.settings.hasCompletedOnboarding) return
+        if (state.link is LinkState.Ready || state.link is LinkState.Connecting) return
+        if (connectJob?.isActive == true) return
+        AppLog.add("network available -> connect")
+        connect()
+    }
+
+    /** Network/DNS/server hiccups are worth another try; bad credentials are not. */
+    private fun isTransient(error: Throwable): Boolean = when (error) {
+        is ApiError -> error.code == 0 || error.code == 408 || error.code == 429 || error.code >= 500
+        is SSLException -> false
+        is IOException -> true
+        else -> false
+    }
+
+    private fun retryDelay(attempt: Int): Long =
+        (1_000L shl (attempt - 1).coerceIn(0, 4)).coerceAtMost(15_000L)
 
     private fun observeRpc(client: HermesRpc) {
         collectors.forEach { it.cancel() }
@@ -2245,6 +2337,9 @@ class HermesController(private val app: Application) {
 
     private companion object {
         const val MAX_ATTACHMENT_BYTES = 8 * 1024 * 1024
+
+        /** Nine backoff waits (1+2+4+8+15×5 ≈ 90 s) before the error is shown. */
+        const val MAX_CONNECT_ATTEMPTS = 10
     }
 
     fun shutdown() {
@@ -2253,6 +2348,10 @@ class HermesController(private val app: Application) {
         tts.stop()
         androidTts.shutdown()
         stopRpc()
+        networkCallback?.let { callback ->
+            runCatching { connectivity?.unregisterNetworkCallback(callback) }
+        }
+        networkCallback = null
         scope.cancel()
     }
 }

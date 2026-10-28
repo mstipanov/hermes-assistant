@@ -238,6 +238,7 @@
     <string name="telegram_continues">You are continuing a Telegram conversation — history has %1$s.</string>
     <string name="hermes_still_answering">Hermes is still answering. Stop it before a new question.</string>
     <string name="not_connected_check_settings">Not connected to Hermes. Check Settings → Test connection.</string>
+    <string name="connect_failed_network">Can\'t reach the server. Check your internet connection.</string>
     <string name="allow_mic_in_settings">Allow the microphone in Settings → Action permissions.</string>
     <string name="google_stt_unavailable">Google STT is unavailable; using Hermes STT.</string>
     <string name="voice_replies_disabled">Voice replies are disabled in Settings.</string>

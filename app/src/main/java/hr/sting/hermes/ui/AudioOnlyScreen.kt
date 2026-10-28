@@ -413,6 +413,11 @@ fun AudioOnlyScreen(
                     ) {
                         if (state.link is LinkState.Connecting) {
                             CircularProgressIndicator(modifier = Modifier.size(16.dp), strokeWidth = 2.dp)
+                            Spacer(Modifier.size(10.dp))
+                            Text(
+                                stringResource(R.string.connecting_to_hermes),
+                                style = MaterialTheme.typography.bodySmall,
+                            )
                         } else {
                             Text(
                                 stringResource(R.string.hermes_not_connected),

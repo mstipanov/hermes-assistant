@@ -239,6 +239,7 @@
     <string name="telegram_continues">Nastavljaš Telegram razgovor — u povijesti je %1$s.</string>
     <string name="hermes_still_answering">Hermes još odgovara. Zaustavi ga prije novog pitanja.</string>
     <string name="not_connected_check_settings">Nisam povezan s Hermesom. Provjeri Postavke → Testiraj vezu.</string>
+    <string name="connect_failed_network">Ne mogu se spojiti na server. Provjeri internet vezu.</string>
     <string name="allow_mic_in_settings">Dozvoli mikrofon u Postavkama → Dozvole za akcije.</string>
     <string name="google_stt_unavailable">Google STT nije dostupan; koristim Hermes STT.</string>
     <string name="voice_replies_disabled">Glasovni odgovori su isključeni u Postavkama.</string>

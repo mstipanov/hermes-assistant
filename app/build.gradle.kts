@@ -49,13 +49,14 @@ android {
             signingConfig = signingConfigs.findByName("release")
         }
         // Test channel: the same code and the same release key, so a beta installs over the
-        // stable app (and back). The "-beta1" suffix only changes the version name, e.g.
-        // 0.46-beta1. Its APK lands in app/build/outputs/apk/beta — that directory sits inside
-        // the distributor's apkDir (…/outputs/apk), so delete it after grabbing the APK: the
-        // stable /version endpoint must never pick up a beta build.
+        // stable app (and back). The "-beta<n>" suffix only changes the version name, e.g.
+        // 0.46-beta2; pass -PbetaNumber=2 for the second beta of the same version. Its APK
+        // lands in app/build/outputs/apk/beta — that directory sits inside the distributor's
+        // apkDir (…/outputs/apk), so delete it after grabbing the APK: the stable /version
+        // endpoint must never pick up a beta build.
         create("beta") {
             initWith(getByName("release"))
-            versionNameSuffix = "-beta1"
+            versionNameSuffix = "-beta" + (project.findProperty("betaNumber") as String? ?: "1")
             signingConfig = signingConfigs.findByName("release")
         }
     }
