@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.54-beta1
+- Device actions accept natural aliases: `battery` / `status` / `wifi` / `network` for `device_status`, `torch`/`lamp`, `timer`, `alarm`, `sms`, `call`, `screenshot`, `clipboard`, `notifications`, `ringer`, `dnd`, `media`, `volume`, `contacts`, `map`, `directions`.
+- So "kolika je baterija" now answers with battery level and charging state instead of "the bridge cannot read the battery".
+
 ## 0.53-beta1
 - Fixed the "Modify system settings" permission being greyed out on Android: the app was missing the `WRITE_SETTINGS` declaration, so the brightness action could never be enabled. Added `ACCESS_NOTIFICATION_POLICY` for Do Not Disturb too.
 
