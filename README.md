@@ -127,12 +127,22 @@ The version is changed in `app/build.gradle.kts` (`versionCode` / `versionName`)
 to `CHANGELOG.md`, the release APK is built, and it is attached to a GitHub release:
 
 ```bash
-gh release create 0.44 app/build/outputs/apk/release/Hermes-0.44.apk \
-  --title "Hermes 0.44" --notes-file /tmp/hermes-0.44-notes.md
+./gradlew :app:assembleRelease
+git push origin main
+gh release create 0.55 app/build/outputs/apk/release/Hermes-0.55.apk \
+  --title "Hermes 0.55" --notes-file /tmp/hermes-0.55-notes.md
 ```
+
+Beta builds use the same command with the beta APK and `--prerelease`, e.g.
+`gh release create 0.55-beta16 app/build/outputs/apk/beta/Hermes-0.55-beta16.apk --prerelease …`.
 
 `<notes>` is the `CHANGELOG.md` section followed by the support footer from `SUPPORT.md`, so every
 release carries the support links.
+
+The GitHub release is a download mirror. The in-app updater never reads GitHub: it downloads from
+the channel hostname (`hermes-assistant.sting.hr`, or `hermes-beta.sting.hr` for betas), which is
+served by `~/IdeaProjects/AndroidAppDistributor` out of `app/build/outputs/apk/<release|beta>` and
+re-scans that directory on every request.
 
 ### Beta channel
 

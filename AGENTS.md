@@ -17,8 +17,9 @@ are intentional (calls, contacts, in-app APK installation).
 ./gradlew :app:assembleRelease               # stable → app/build/outputs/apk/release/
 ```
 
-There is **no upload step**. `~/IdeaProjects/AndroidAppDistributor` (port 8095) serves whatever
-APK sits in each app's `apkDir` and reads `output-metadata.json` for the version:
+There is **no upload step** for the in-app updater. `~/IdeaProjects/AndroidAppDistributor`
+(port 8095) serves whatever APK sits in each app's `apkDir` and reads `output-metadata.json`
+for the version:
 
 - beta channel → `https://hermes-beta.sting.hr` (`CHANGELOG-beta.md`)
 - stable channel → `https://hermes-assistant.sting.hr` (`CHANGELOG.md`)
@@ -26,8 +27,20 @@ APK sits in each app's `apkDir` and reads `output-metadata.json` for the version
 Verify a publish locally before blaming Cloudflare:
 `curl -s -H 'Host: hermes-beta.sting.hr' http://127.0.0.1:8095/version`
 
-Never `gh release`, never bump `versionCode` backwards — the in-app updater only compares
-`versionCode`, so a same-code rebuild is invisible to installed users.
+**Every published build is also tagged and released on GitHub**, because the README, the release
+badge and the installation instructions send people there. Push the branch first, then attach the
+APK to a release named exactly like the version (`--prerelease` for betas):
+
+```bash
+git push origin main
+gh release create 0.55 app/build/outputs/apk/release/Hermes-0.55.apk \
+  --title "Hermes 0.55" --notes-file <notes>
+```
+
+`<notes>` is the `CHANGELOG.md` section followed by the support footer from `SUPPORT.md`. The
+GitHub release is a download mirror, not the update channel: the updater reads the distributor
+hostname only. Never bump `versionCode` backwards — the updater compares `versionCode` alone, so a
+same-code rebuild is invisible to installed users.
 
 ## Versions and changelog
 
