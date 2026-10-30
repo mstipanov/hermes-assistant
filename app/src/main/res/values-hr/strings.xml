@@ -65,7 +65,7 @@
     <string name="status_listening">Slušam…</string>
     <string name="hint_tap_to_stop">Dodirni orb da prekineš</string>
     <string name="status_recording">Snimam…</string>
-    <string name="hint_tap_to_finish">Ponovno tapni orb kad završiš</string>
+    <string name="hint_tap_to_finish">Tapni orb za slanje</string>
     <string name="status_transcribing">Prepoznajem govor…</string>
     <string name="status_thinking">Hermes razmišlja…</string>
     <string name="status_speaking">Hermes govori…</string>

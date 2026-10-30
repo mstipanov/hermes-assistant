@@ -37,6 +37,8 @@ class AudioRecorder(private val context: Context) {
         minDurationMs: Long = 900,
         /** Start-stop mode: keep recording (no VAD) until [finish] is called. */
         manual: Boolean = false,
+        /** Receives each PCM16 frame while recording (live dictation). */
+        onFrame: ((ByteArray) -> Unit)? = null,
     ): ByteArray = withContext(Dispatchers.IO) {
         cancelled = false
         stopRequested = false
@@ -77,6 +79,7 @@ class AudioRecorder(private val context: Context) {
                 val bytes = ByteArray(read * 2)
                 ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(buffer, 0, read)
                 output.write(bytes)
+                runCatching { onFrame?.invoke(bytes) }
 
                 var sum = 0.0
                 for (i in 0 until read) {

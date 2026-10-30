@@ -59,6 +59,7 @@ import androidx.core.content.ContextCompat
 import hr.sting.hermes.voice.AndroidSttRecognizer
 import hr.sting.hermes.R
 import hr.sting.hermes.voice.HermesService
+import hr.sting.hermes.voice.LiveStt
 import hr.sting.hermes.voice.AndroidTtsPlayer
 import hr.sting.hermes.voice.SpeechText
 import hr.sting.hermes.voice.TtsPlayer
@@ -133,6 +134,12 @@ class HermesController(private val app: Application) {
     private var voiceJob: Job? = null
     private var ttsStarted = false
     private var turnWatchdogJob: Job? = null
+    private var liveStt: LiveStt? = null
+    private val manualTranscript = StringBuilder()
+    @Volatile private var manualGoogleActive = false
+    @Volatile private var manualFinishing = false
+    private var manualRestartJob: Job? = null
+    private var manualRestartDelay = 250L
     private var deviceConfirmJob: Job? = null
 
     private var autoListenJob: Job? = null
@@ -148,20 +155,41 @@ class HermesController(private val app: Application) {
     init {
         androidStt.listener = object : AndroidSttRecognizer.Listener {
             override fun onPartial(text: String) {
+                if (manualGoogleActive) {
+                    _ui.update { it.copy(partialTranscript = manualText(text)) }
+                    return
+                }
                 _ui.update { it.copy(partialTranscript = text) }
             }
 
             override fun onEndOfSpeech() {
+                // Start-stop dictation keeps the turn open: the next segment restarts
+                // the recognizer, so do not flip to "transcribing" here.
+                if (manualGoogleActive) return
                 _ui.update { it.copy(voiceState = "transcribing") }
             }
 
             override fun onFinal(text: String) {
                 VoiceDiagnostics.update { it.copy(lastStt = "google: $text") }
+                if (manualGoogleActive) {
+                    if (text.isNotBlank()) {
+                        if (manualTranscript.isNotEmpty()) manualTranscript.append(' ')
+                        manualTranscript.append(text.trim())
+                        manualRestartDelay = 250L
+                    }
+                    _ui.update { it.copy(partialTranscript = manualTranscript.toString()) }
+                    if (manualFinishing) completeManualGoogle() else scheduleManualRestart()
+                    return
+                }
                 _ui.update { it.copy(partialTranscript = text) }
                 sendMessage(text, fromVoice = true)
             }
 
             override fun onNoSpeech() {
+                if (manualGoogleActive) {
+                    if (manualFinishing) completeManualGoogle() else scheduleManualRestart()
+                    return
+                }
                 _ui.update {
                     it.copy(
                         voiceState = "idle",
@@ -173,6 +201,15 @@ class HermesController(private val app: Application) {
 
             override fun onRecoverableError(message: String) {
                 VoiceDiagnostics.update { it.copy(lastStt = "google error: $message") }
+                if (manualGoogleActive) {
+                    if (manualFinishing) {
+                        completeManualGoogle()
+                    } else {
+                        manualRestartDelay = (manualRestartDelay * 2).coerceAtMost(2_000L)
+                        scheduleManualRestart()
+                    }
+                    return
+                }
                 _ui.update {
                     it.copy(
                         notice = app.getString(R.string.switching_to_hermes_stt, message),
@@ -184,6 +221,10 @@ class HermesController(private val app: Application) {
 
             override fun onFatalError(message: String) {
                 VoiceDiagnostics.update { it.copy(lastStt = "google fatal: $message") }
+                if (manualGoogleActive) {
+                    completeManualGoogle(error = message)
+                    return
+                }
                 _ui.update {
                     it.copy(voiceState = "idle", partialTranscript = "", error = message)
                 }
@@ -684,11 +725,98 @@ class HermesController(private val app: Application) {
             return
         }
         val manual = _ui.value.settings.micMode == "manual"
-        if (!manual && _ui.value.settings.sttEngine == "google" && androidStt.isAvailable()) {
-            startVoiceGoogle()
-        } else {
-            startVoiceServer(manual)
+        val google = _ui.value.settings.sttEngine == "google" && androidStt.isAvailable()
+        when {
+            manual && google -> startVoiceManualGoogle()
+            !manual && google -> startVoiceGoogle()
+            else -> startVoiceServer(manual)
         }
+    }
+
+    /**
+     * Start-stop dictation on top of Google's recognizer: partial text appears while
+     * the user speaks; when Google ends a segment on its own the text is kept and the
+     * recognizer restarts, so only the user's tap sends the message.
+     */
+    private fun startVoiceManualGoogle() {
+        AppLog.add("stt google manual start")
+        manualTranscript.clear()
+        manualGoogleActive = true
+        manualFinishing = false
+        manualRestartDelay = 250L
+        _ui.update {
+            it.copy(
+                voiceState = "listening",
+                manualCapture = true,
+                partialTranscript = "",
+                error = null,
+                notice = null,
+            )
+        }
+        scope.launch {
+            delay(300)
+            if (manualGoogleActive && !manualFinishing && !androidStt.start("hr-HR")) {
+                completeManualGoogle(error = app.getString(R.string.google_stt_unavailable))
+            }
+        }
+    }
+
+    private fun manualText(partial: String): String {
+        val prefix = manualTranscript.toString()
+        return if (prefix.isBlank()) partial else "$prefix $partial"
+    }
+
+    private fun scheduleManualRestart() {
+        manualRestartJob?.cancel()
+        manualRestartJob = scope.launch {
+            delay(manualRestartDelay)
+            if (manualGoogleActive && !manualFinishing) {
+                if (!androidStt.start("hr-HR")) {
+                    completeManualGoogle(error = app.getString(R.string.google_stt_unavailable))
+                }
+            }
+        }
+    }
+
+    private fun finishManualGoogle() {
+        manualFinishing = true
+        _ui.update { it.copy(voiceState = "transcribing", manualCapture = false) }
+        androidStt.stopListening()
+        // Safety net: if the recognizer never reports a final, send what we have.
+        scope.launch {
+            delay(4_000)
+            if (manualGoogleActive && manualFinishing) completeManualGoogle()
+        }
+    }
+
+    private fun completeManualGoogle(error: String? = null) {
+        if (!manualGoogleActive) return
+        manualGoogleActive = false
+        manualFinishing = false
+        manualRestartJob?.cancel()
+        androidStt.cancel()
+        val text = manualTranscript.toString().trim()
+        manualTranscript.clear()
+        if (error != null) {
+            _ui.update {
+                it.copy(voiceState = "idle", manualCapture = false, partialTranscript = "", error = error)
+            }
+            return
+        }
+        if (text.isBlank()) {
+            _ui.update {
+                it.copy(
+                    voiceState = "idle",
+                    manualCapture = false,
+                    partialTranscript = "",
+                    notice = app.getString(R.string.did_not_hear),
+                )
+            }
+            return
+        }
+        AppLog.add("stt google manual: ${text.length} chars")
+        _ui.update { it.copy(voiceState = "idle", manualCapture = false, partialTranscript = "") }
+        sendMessage(text, fromVoice = true)
     }
 
     /**
@@ -699,6 +827,10 @@ class HermesController(private val app: Application) {
     fun finishVoice() {
         if (_ui.value.voiceState != "listening" || !_ui.value.manualCapture) return
         AppLog.add("voice: manual stop")
+        if (manualGoogleActive) {
+            finishManualGoogle()
+            return
+        }
         _ui.update { it.copy(voiceState = "transcribing", manualCapture = false) }
         recorder.finish()
     }
@@ -734,17 +866,33 @@ class HermesController(private val app: Application) {
                 )
             }
             try {
+                val live = if (manual) rest?.let { LiveStt(it) } else null
+                if (live != null) {
+                    live.onPartial = { text ->
+                        _ui.update { it.copy(partialTranscript = text) }
+                    }
+                    val connected = runCatching { live.connect() }.getOrDefault(false)
+                    AppLog.add(
+                        "live stt: " + if (connected) "connected" else "unavailable, batch fallback",
+                    )
+                    if (connected) liveStt = live else live.cancel()
+                }
                 val wav = recorder.record(
                     maxDurationMs = if (manual) 60_000 else 30_000,
                     manual = manual,
+                    onFrame = { pcm -> liveStt?.push(pcm) },
                 )
                 if (wav.size <= 44) {
+                    liveStt?.cancel()
+                    liveStt = null
                     _ui.update { it.copy(voiceState = "idle", manualCapture = false) }
                     return@launch
                 }
                 _ui.update { it.copy(voiceState = "transcribing", manualCapture = false) }
                 val client = rest ?: return@launch
-                val transcript = client.transcribe(wav).trim()
+                val liveSession = liveStt
+                liveStt = null
+                val transcript = (liveSession?.finish() ?: client.transcribe(wav)).trim()
                 if (transcript.isBlank()) {
                     _ui.update {
                         it.copy(
@@ -767,7 +915,13 @@ class HermesController(private val app: Application) {
     }
 
     fun stopVoice() {
+        manualGoogleActive = false
+        manualFinishing = false
+        manualRestartJob?.cancel()
+        manualTranscript.clear()
         androidStt.cancel()
+        liveStt?.cancel()
+        liveStt = null
         recorder.cancel()
         voiceJob?.cancel()
         voiceJob = null

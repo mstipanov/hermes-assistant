@@ -291,6 +291,7 @@ private fun PolicyChip(label: String, selected: Boolean, onClick: () -> Unit) {
 }
 
 private fun runtimePermissionList(): List<String> = listOf(
+    android.Manifest.permission.RECORD_AUDIO,
     android.Manifest.permission.READ_CONTACTS,
     android.Manifest.permission.CALL_PHONE,
     android.Manifest.permission.SEND_SMS,

@@ -79,6 +79,16 @@ class AndroidSttRecognizer(private val context: Context) {
         return true
     }
 
+    /**
+     * Ask the recognizer to finish the current utterance; the final result still
+     * arrives through [Listener.onFinal]. Used by start-stop dictation, where the
+     * user decides when the sentence ends.
+     */
+    fun stopListening() {
+        val engine = recognizer
+        main.post { runCatching { engine?.stopListening() } }
+    }
+
     /** Stop the recognizer and discard the utterance (the Stop button). */
     fun cancel() {
         active = false

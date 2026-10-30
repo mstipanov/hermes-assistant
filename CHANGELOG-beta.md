@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta7
+- Start–stop mode now transcribes **live while you speak**: partial text streams into the orb like in auto mode, and tapping send only ends the recording and hands the final transcript to Hermes.
+- While a start–stop recording runs, the orb shows a **send arrow** instead of a stop square — it no longer looks like it will discard the sentence.
+- With Google STT the dictation streams on the phone itself (segments are appended when Google pauses, so a pause never cuts the message); with Hermes server STT it uses the server's live stream when available, otherwise it transcribes the recording after you stop.
+
 ## 0.55-beta6
 - "Show alarms" no longer fails with "Permission Denial" on phones whose clock app does not export the alarm list: Hermes now falls back to opening the clock app itself.
 - "Set alarm" falls back to the pre-filled create-alarm screen when the silent insert is refused.

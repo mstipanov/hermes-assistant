@@ -207,6 +207,7 @@ fun AudioOnlyScreen(
                                     pulse = pulse,
                                     voiceState = voiceState,
                                     running = state.running,
+                                    manual = state.manualCapture,
                                     size = orbSize,
                                     onOrb = onOrb,
                                 )
@@ -236,6 +237,7 @@ fun AudioOnlyScreen(
                         pulse = pulse,
                         voiceState = voiceState,
                         running = state.running,
+                        manual = state.manualCapture,
                         size = 238.dp,
                         onOrb = onOrb,
                     )
@@ -336,6 +338,7 @@ private fun Orb(
     pulse: Float,
     voiceState: String,
     running: Boolean,
+    manual: Boolean,
     size: Dp,
     onOrb: () -> Unit,
 ) {
@@ -370,6 +373,7 @@ private fun Orb(
             Icon(
                 when {
                     voiceState == "speaking" -> Icons.Filled.GraphicEq
+                    manual && voiceState == "listening" -> Icons.Filled.Send
                     voiceState == "listening" || voiceState == "transcribing" ||
                         running || voiceState == "thinking" -> Icons.Filled.Stop
                     else -> Icons.Filled.Mic
