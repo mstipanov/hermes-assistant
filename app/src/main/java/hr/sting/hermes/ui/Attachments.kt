@@ -8,6 +8,7 @@ import android.provider.OpenableColumns
 import androidx.compose.foundation.Image as ComposeImage
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,12 +28,15 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -49,6 +53,7 @@ import kotlin.math.min
 
 private const val MAX_INPUT_ATTACHMENT_BYTES = 8 * 1024 * 1024
 private const val IMAGE_MAX_DIMENSION = 2048
+private val THUMBNAIL_SIZE = 42.dp
 
 fun cameraOutputUri(context: Context): Uri {
     val dir = File(context.cacheDir, "attachments").apply { mkdirs() }
@@ -171,71 +176,109 @@ fun AttachmentStrip(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         attachments.forEach { attachment ->
-            Surface(
-                color = MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(14.dp),
-            ) {
-                Row(
-                    modifier = Modifier.padding(start = 8.dp, end = 2.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
+            key(attachment.id) {
+                Surface(
+                    color = MaterialTheme.colorScheme.surfaceVariant,
+                    shape = RoundedCornerShape(14.dp),
                 ) {
-                    if (attachment.kind == AttachmentKind.IMAGE) {
-                        val bitmap = remember(attachment.id) {
-                            runCatching {
-                                BitmapFactory.decodeByteArray(attachment.bytes, 0, attachment.bytes.size)
-                            }.getOrNull()
-                        }
-                        if (bitmap != null) {
-                            ComposeImage(
-                                bitmap = bitmap.asImageBitmap(),
-                                contentDescription = attachment.name,
-                                modifier = Modifier
-                                    .size(42.dp)
-                                    .clip(RoundedCornerShape(9.dp)),
-                                contentScale = ContentScale.Crop,
-                            )
-                        } else {
-                            Icon(Icons.Filled.Image, contentDescription = null)
-                        }
-                    } else {
-                        Icon(
-                            if (attachment.kind == AttachmentKind.PDF) {
-                                Icons.Filled.PictureAsPdf
-                            } else {
-                                Icons.Filled.InsertDriveFile
-                            },
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                        )
-                    }
-                    Column(
-                        modifier = Modifier
-                            .width(130.dp)
-                            .padding(horizontal = 8.dp),
+                    Row(
+                        modifier = Modifier.padding(start = 8.dp, end = 2.dp, top = 6.dp, bottom = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Text(
-                            attachment.name,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            style = MaterialTheme.typography.bodySmall,
-                        )
-                        Text(
-                            formatSize(attachment.bytes.size),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                    IconButton(onClick = { onRemove(attachment.id) }) {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = stringResource(R.string.remove_attachment),
-                            modifier = Modifier.size(16.dp),
-                        )
+                        if (attachment.kind == AttachmentKind.IMAGE) {
+                            AttachmentThumbnail(attachment)
+                        } else {
+                            Icon(
+                                if (attachment.kind == AttachmentKind.PDF) {
+                                    Icons.Filled.PictureAsPdf
+                                } else {
+                                    Icons.Filled.InsertDriveFile
+                                },
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                            )
+                        }
+                        Column(
+                            modifier = Modifier
+                                .width(130.dp)
+                                .padding(horizontal = 8.dp),
+                        ) {
+                            Text(
+                                attachment.name,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                style = MaterialTheme.typography.bodySmall,
+                            )
+                            Text(
+                                formatSize(attachment.bytes.size),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        IconButton(onClick = { onRemove(attachment.id) }) {
+                            Icon(
+                                Icons.Filled.Close,
+                                contentDescription = stringResource(R.string.remove_attachment),
+                                modifier = Modifier.size(16.dp),
+                            )
+                        }
                     }
                 }
             }
         }
     }
+}
+
+@Composable
+private fun AttachmentThumbnail(attachment: PendingAttachment) {
+    val targetPx = LocalDensity.current.run { THUMBNAIL_SIZE.roundToPx() }
+    // No manual recycle(): Compose may still draw the previous frame's bitmap after the state
+    // changes, and recycling it there crashes with "trying to use a recycled bitmap". The
+    // downsample below is what keeps memory small; the rest is left to the GC.
+    val bitmap by produceState<Bitmap?>(initialValue = null, attachment.id, targetPx) {
+        value = withContext(Dispatchers.IO) {
+            runCatching { decodeThumbnail(attachment.bytes, targetPx) }.getOrNull()
+        }
+    }
+    val thumbnail = bitmap
+    if (thumbnail != null) {
+        ComposeImage(
+            bitmap = thumbnail.asImageBitmap(),
+            contentDescription = attachment.name,
+            modifier = Modifier
+                .size(THUMBNAIL_SIZE)
+                .clip(RoundedCornerShape(9.dp)),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        Box(
+            modifier = Modifier.size(THUMBNAIL_SIZE),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.Image, contentDescription = null)
+        }
+    }
+}
+
+/**
+ * Decodes [bytes] downsampled until the short side is within [targetPx, 2 * targetPx) pixels —
+ * the square crop only needs the short side, so this keeps the thumbnail sharp while never
+ * materialising the full-size bitmap in memory.
+ */
+private fun decodeThumbnail(bytes: ByteArray, targetPx: Int): Bitmap? {
+    if (bytes.isEmpty() || targetPx <= 0) return null
+    val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+    BitmapFactory.decodeByteArray(bytes, 0, bytes.size, bounds)
+    if (bounds.outWidth <= 0 || bounds.outHeight <= 0) return null
+    val shortSide = min(bounds.outWidth, bounds.outHeight)
+    var sample = 1
+    while (shortSide / (sample * 2) >= targetPx) sample *= 2
+    return BitmapFactory.decodeByteArray(
+        bytes,
+        0,
+        bytes.size,
+        BitmapFactory.Options().apply { inSampleSize = sample },
+    )
 }
 
 private fun formatSize(bytes: Int): String = when {
