@@ -99,6 +99,8 @@ class MainActivity : ComponentActivity() {
                         onCheckUpdate = core::checkForUpdates,
                         onInstallUpdate = core::installUpdate,
                         onOpenActionPermissions = core::openActionPermissions,
+                        onNewSession = core::newChat,
+                        onSelectSession = core::selectSession,
                     )
 
                     mode == "chat" -> ChatScreen(
@@ -150,10 +152,6 @@ class MainActivity : ComponentActivity() {
                         onConnect = core::connect,
                         onFinishVoice = core::finishVoice,
                         onMicModeChange = core::setMicMode,
-                        onNewSession = core::newChat,
-                        onOpenSessions = core::openSessions,
-                        onSelectSession = core::selectSession,
-                        onCloseSessions = core::closeSessions,
                         onApprove = core::approve,
                         onConfirmDeviceAction = core::confirmDeviceAction,
                         onClearMessage = core::clearError,

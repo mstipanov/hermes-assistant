@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta5
+- Session actions moved off the main voice screen into **Settings → Conversations**: new session and the list of previous sessions are no longer one stray tap away from the orb.
+- The Conversations page shows the current session, a "New session" button and every previous session; picking one closes Settings and reopens that conversation.
+
 ## 0.55-beta4
 - Settings is now a short menu instead of one long scroll: **Connection**, **Voice**, **Assistant & permissions**, **Updates** and **Diagnostics**, each opening its own page with a back arrow.
 - The connection page holds the server/token/Access fields together with Save, Test connection and Reconnect; voice tests stay on the Voice page; the permission matrix lives under Assistant & permissions; logs, diagnostics and sign out under Diagnostics.

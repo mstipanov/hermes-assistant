@@ -29,6 +29,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.Build
 import androidx.compose.material.icons.filled.GraphicEq
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Shield
@@ -83,6 +84,7 @@ private enum class SettingsPage {
     HOME,
     CONNECTION,
     VOICE,
+    SESSIONS,
     ASSISTANT,
     UPDATES,
     ADVANCED,
@@ -104,6 +106,8 @@ fun SettingsScreen(
     onCheckUpdate: () -> Unit,
     onInstallUpdate: () -> Unit,
     onOpenActionPermissions: () -> Unit,
+    onNewSession: () -> Unit,
+    onSelectSession: (String) -> Unit,
 ) {
     val settings = state.settings
     var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
@@ -609,6 +613,54 @@ fun SettingsScreen(
                     }
                 }
 
+                SettingsPage.SESSIONS -> {
+                    Text(
+                        stringResource(R.string.current_session),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Text(
+                        state.title.ifBlank { stringResource(R.string.new_chat) },
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold,
+                    )
+                    OutlinedButton(
+                        onClick = {
+                            onNewSession()
+                            onClose()
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.new_session))
+                    }
+
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+
+                    Text(
+                        stringResource(R.string.previous_sessions),
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    if (state.sessions.isEmpty()) {
+                        Text(
+                            stringResource(R.string.no_sessions),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    } else {
+                        state.sessions.forEach { session ->
+                            SessionRowItem(
+                                session = session,
+                                current = session.id == state.currentStoredId,
+                                onClick = {
+                                    onSelectSession(session.id)
+                                    onClose()
+                                },
+                            )
+                        }
+                    }
+                }
+
                 SettingsPage.ASSISTANT -> {
                     Text(
                         stringResource(R.string.system_assistant),
@@ -975,6 +1027,7 @@ private fun pageTitle(page: SettingsPage): String = when (page) {
     SettingsPage.HOME -> stringResource(R.string.settings)
     SettingsPage.CONNECTION -> stringResource(R.string.connection_section)
     SettingsPage.VOICE -> stringResource(R.string.voice_section)
+    SettingsPage.SESSIONS -> stringResource(R.string.sessions)
     SettingsPage.ASSISTANT -> stringResource(R.string.settings_page_assistant)
     SettingsPage.UPDATES -> stringResource(R.string.updates)
     SettingsPage.ADVANCED -> stringResource(R.string.diagnostics)
@@ -1006,6 +1059,12 @@ private fun SettingsHome(
         title = stringResource(R.string.voice_section),
         subtitle = "$stt · $capture",
         onClick = { onOpen(SettingsPage.VOICE) },
+    )
+    SettingsEntry(
+        icon = Icons.Filled.History,
+        title = stringResource(R.string.sessions),
+        subtitle = state.title.ifBlank { stringResource(R.string.no_sessions) },
+        onClick = { onOpen(SettingsPage.SESSIONS) },
     )
     SettingsEntry(
         icon = Icons.Filled.Shield,

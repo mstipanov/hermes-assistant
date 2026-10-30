@@ -602,7 +602,6 @@ class HermesController(private val app: Application) {
                     approval = null,
                     clarify = null,
                     error = null,
-                    showSessions = false,
                 )
             }
             createSession()
@@ -615,9 +614,7 @@ class HermesController(private val app: Application) {
         stopVoice()
         stopTts()
         scope.launch {
-            _ui.update {
-                it.copy(showSessions = false, error = null, messages = emptyList(), running = false)
-            }
+            _ui.update { it.copy(error = null, messages = emptyList(), running = false) }
             resumeSession(storedId)
         }
     }
@@ -1827,10 +1824,6 @@ class HermesController(private val app: Application) {
     // ── Settings / onboarding ─────────────────────────────────────────────
 
     fun openSettings() = _ui.update { it.copy(showSettings = true) }
-
-    fun openSessions() = _ui.update { it.copy(showSessions = true) }
-
-    fun closeSessions() = _ui.update { it.copy(showSessions = false) }
 
     fun openActionPermissions() = _ui.update { it.copy(showActionPermissions = true) }
 

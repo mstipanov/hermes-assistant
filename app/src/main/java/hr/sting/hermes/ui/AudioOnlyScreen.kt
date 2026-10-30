@@ -29,11 +29,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.GraphicEq
-import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Mic
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.filled.Settings
@@ -91,10 +89,6 @@ fun AudioOnlyScreen(
     onConnect: () -> Unit,
     onFinishVoice: () -> Unit,
     onMicModeChange: (Boolean) -> Unit,
-    onNewSession: () -> Unit,
-    onOpenSessions: () -> Unit,
-    onSelectSession: (String) -> Unit,
-    onCloseSessions: () -> Unit,
     onApprove: (String) -> Unit,
     onConfirmDeviceAction: (Boolean) -> Unit,
     onClearMessage: () -> Unit,
@@ -157,7 +151,7 @@ fun AudioOnlyScreen(
                     ),
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                ScreenHeader(state, onOpenSessions, onNewSession, onOpenChat, onOpenSettings)
+                ScreenHeader(state, onOpenChat, onOpenSettings)
 
                 if (landscape) {
                     BoxWithConstraints(
@@ -280,24 +274,12 @@ fun AudioOnlyScreen(
                 }
             }
         }
-
-        if (state.showSessions) {
-            SessionsSheet(
-                sessions = state.sessions,
-                currentId = state.currentStoredId,
-                onSelect = onSelectSession,
-                onNewSession = onNewSession,
-                onDismiss = onCloseSessions,
-            )
-        }
     }
 }
 
 @Composable
 private fun ScreenHeader(
     state: HermesUiState,
-    onOpenSessions: () -> Unit,
-    onNewSession: () -> Unit,
     onOpenChat: () -> Unit,
     onOpenSettings: () -> Unit,
 ) {
@@ -338,12 +320,6 @@ private fun ScreenHeader(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-        }
-        IconButton(onClick = onOpenSessions) {
-            Icon(Icons.Filled.History, contentDescription = stringResource(R.string.sessions))
-        }
-        IconButton(onClick = onNewSession) {
-            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.new_session))
         }
         IconButton(onClick = onOpenChat) {
             Icon(Icons.Filled.Chat, contentDescription = stringResource(R.string.cd_chat))
