@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "244202435113",
+    "project_id": "hermes-assistant-hr",
+    "storage_bucket": "hermes-assistant-hr.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:244202435113:android:2080a09d593e1039872238",
+        "android_client_info": {
+          "package_name": "hr.sting.hermes"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVmOZNVtiegc3uO1CEPwjikhS4yyGIr4Q"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
