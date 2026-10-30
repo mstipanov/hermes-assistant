@@ -326,10 +326,57 @@ object DeviceActions {
     }
 
     private fun showAlarms(context: Context): JsonObject {
-        context.startActivity(
-            Intent(AlarmClock.ACTION_SHOW_ALARMS).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-        )
-        return jsonObject("ok" to true, "action" to "show_alarms")
+        val alarmList = Intent(AlarmClock.ACTION_SHOW_ALARMS)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val direct = runCatching { context.startActivity(alarmList) }.exceptionOrNull()
+        if (direct == null) {
+            return jsonObject("ok" to true, "action" to "show_alarms", "mode" to "alarms")
+        }
+        // One UI (and a few other vendor clocks) do not export the alarm-list screen to
+        // other apps, which surfaces as "Permission Denial". Open the clock app itself.
+        val clockPackage = runCatching {
+            alarmList.resolveActivity(context.packageManager)?.packageName
+        }.getOrNull()
+            ?: listOf(
+                "com.sec.android.app.clockpackage",
+                "com.google.android.deskclock",
+                "com.android.deskclock",
+            ).firstOrNull { packageExists(context, it) }
+        val launch = clockPackage?.let {
+            context.packageManager.getLaunchIntentForPackage(it)
+        }
+        if (launch != null) {
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            val error = runCatching { context.startActivity(launch) }.exceptionOrNull()
+            if (error == null) {
+                return jsonObject(
+                    "ok" to true,
+                    "action" to "show_alarms",
+                    "mode" to "clock_app",
+                    "package" to clockPackage,
+                )
+            }
+            return errorResult(activityStartError(context, error))
+        }
+        return errorResult(activityStartError(context, direct))
+    }
+
+    private fun packageExists(context: Context, packageName: String): Boolean = runCatching {
+        context.packageManager.getPackageInfo(packageName, 0)
+        true
+    }.getOrDefault(false)
+
+    /** Turns Android's raw BAL/export denial into something the user can act on. */
+    private fun activityStartError(context: Context, error: Throwable): String {
+        val message = error.message ?: error.javaClass.simpleName
+        return if (message.contains("Permission Denial", true) ||
+            message.contains("not allowed to start activity", true) ||
+            message.contains("Background activity", true)
+        ) {
+            context.getString(R.string.activity_start_denied, message)
+        } else {
+            message
+        }
     }
 
     private fun openUrl(context: Context, params: JsonObject): JsonObject {
@@ -354,20 +401,38 @@ object DeviceActions {
             return errorResult(context.getString(R.string.invalid_time))
         }
         val label = params.str("label").ifBlank { context.getString(R.string.default_alarm_label) }
+        val formatted = "%02d:%02d".format(hour, minute)
         val intent = Intent(AlarmClock.ACTION_SET_ALARM)
             .putExtra(AlarmClock.EXTRA_HOUR, hour)
             .putExtra(AlarmClock.EXTRA_MINUTES, minute)
             .putExtra(AlarmClock.EXTRA_MESSAGE, label)
             .putExtra(AlarmClock.EXTRA_SKIP_UI, true)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
-        val formatted = "%02d:%02d".format(hour, minute)
+        val silent = runCatching { context.startActivity(intent) }.exceptionOrNull()
+        if (silent == null) {
+            return jsonObject(
+                "ok" to true,
+                "action" to "set_alarm",
+                "time" to formatted,
+                "label" to label,
+                "message" to context.getString(R.string.alarm_set, formatted),
+            )
+        }
+        // Some vendor clocks refuse the silent insert (not exported); open the
+        // create-alarm screen pre-filled instead, which the user confirms.
+        val manual = Intent(AlarmClock.ACTION_SET_ALARM)
+            .putExtra(AlarmClock.EXTRA_HOUR, hour)
+            .putExtra(AlarmClock.EXTRA_MINUTES, minute)
+            .putExtra(AlarmClock.EXTRA_MESSAGE, label)
+            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        val manualError = runCatching { context.startActivity(manual) }.exceptionOrNull()
+        if (manualError != null) return errorResult(activityStartError(context, manualError))
         return jsonObject(
             "ok" to true,
             "action" to "set_alarm",
             "time" to formatted,
             "label" to label,
-            "message" to context.getString(R.string.alarm_set, formatted),
+            "mode" to "manual",
         )
     }
 

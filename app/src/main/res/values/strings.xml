@@ -559,4 +559,5 @@
     <string name="test_voice_section">Test voice</string>
     <string name="current_session">Current session</string>
     <string name="previous_sessions">Previous sessions</string>
+    <string name="activity_start_denied">Android blocked opening that screen. Open Hermes and try again. (%1$s)</string>
 </resources>

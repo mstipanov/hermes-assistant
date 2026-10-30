@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta6
+- "Show alarms" no longer fails with "Permission Denial" on phones whose clock app does not export the alarm list: Hermes now falls back to opening the clock app itself.
+- "Set alarm" falls back to the pre-filled create-alarm screen when the silent insert is refused.
+- Background/blocked activity starts now return an actionable message ("open Hermes and try again") instead of the raw Android denial.
+
 ## 0.55-beta5
 - Session actions moved off the main voice screen into **Settings → Conversations**: new session and the list of previous sessions are no longer one stray tap away from the orb.
 - The Conversations page shows the current session, a "New session" button and every previous session; picking one closes Settings and reopens that conversation.

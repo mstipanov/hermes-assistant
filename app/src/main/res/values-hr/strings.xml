@@ -560,4 +560,5 @@
     <string name="test_voice_section">Testiraj glas</string>
     <string name="current_session">Trenutna sesija</string>
     <string name="previous_sessions">Prethodne sesije</string>
+    <string name="activity_start_denied">Android je blokirao otvaranje tog ekrana. Otvori Hermes i pokušaj ponovno. (%1$s)</string>
 </resources>
