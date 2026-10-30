@@ -1,5 +1,14 @@
 # Hermes Assistant
 
+## 0.55
+- **Long jobs in their own sessions.** Work that outlives a turn runs in a separate session; the "Zadaci" group in the session switcher lists those jobs with a live status, and a job that parks on a decision shows "traži odluku".
+- **Notifications for job decisions.** The app raises a notification when a job needs an answer, and tapping it opens that job's session so you can reply there. Notifications also arrive as Firebase pushes (project hermes-assistant-hr), so they work with the app in the background.
+- **Messages typed while Hermes is answering are queued, not dropped** — they are sent as soon as the turn ends, and the queue stays with the conversation it was typed in.
+- **Live transcription in start-stop mode**: dictation streams while you speak instead of being transcribed only at the end.
+- **Switching sessions stops the turn you leave**, the turn watchdog measures silence instead of total time, and chat no longer yanks you to the bottom while you read history.
+- **Smaller and safer builds**: R8 shrinking takes the APK from ~49 MB to ~38 MB, and the updater now refuses any APK that is not signed with the same key as the installed app.
+- Screen capture no longer gets stuck on "busy", file saves/opens ask for confirmation and reject executables, and the audio-only screen no longer redraws every frame.
+
 ## 0.45
 - English and Croatian user interface. The app follows the system language; English is the default for all other languages.
 - Android 13+ shows a per-app language picker under Settings → Apps → Hermes → Language.
