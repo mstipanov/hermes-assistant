@@ -567,12 +567,6 @@ fun SettingsScreen(
                 }
             }
             ToggleRow(
-                title = stringResource(R.string.share_telegram),
-                subtitle = stringResource(R.string.share_telegram_desc),
-                checked = draft.shareTelegramSession,
-                onChange = { draft = draft.copy(shareTelegramSession = it) },
-            )
-            ToggleRow(
                 title = stringResource(R.string.hands_free),
                 subtitle = stringResource(R.string.hands_free_desc),
                 checked = draft.handsFree,

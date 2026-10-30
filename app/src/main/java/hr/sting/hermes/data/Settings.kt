@@ -22,7 +22,6 @@ data class AppSettings(
     val confirmDeviceActions: Boolean = true,
     /** Per-action override: action id -> allow / confirm / deny. */
     val actionPolicies: Map<String, String> = emptyMap(),
-    val shareTelegramSession: Boolean = true,
     val listenOnOpen: Boolean = false,
     val defaultView: String = "voice",
     val continuousVoice: Boolean = true,

@@ -132,9 +132,6 @@ class HermesController(private val app: Application) {
     private var sessionsRefreshJob: Job? = null
     private var voiceJob: Job? = null
     private var ttsStarted = false
-    private var lastKnownHistoryCount = 0
-    private var historySyncJob: Job? = null
-    private var syncingHistory = false
     private var turnWatchdogJob: Job? = null
     private var deviceConfirmJob: Job? = null
 
@@ -402,14 +399,14 @@ class HermesController(private val app: Application) {
     private suspend fun loadSessions() {
         val client = rpc ?: return
         runCatching {
-            val result = client.call("session.list", jsonObject("limit" to 60))
-            result.objects("sessions").map { it.toSessionRow() }
+            client.call("session.list", jsonObject("limit" to 60))
+                .objects("sessions")
+                .map { it.toSessionRow() }
+                // The app no longer shares conversations with the Telegram bot: its
+                // sessions live in a separate world and are not offered here.
+                .filter { !it.source.equals("telegram", ignoreCase = true) }
         }.onSuccess { rows ->
             _ui.update { it.copy(sessions = rows) }
-            val current = _ui.value.currentStoredId
-            if (current != null) {
-                rows.firstOrNull { it.id == current }?.let { lastKnownHistoryCount = it.messageCount }
-            }
         }
     }
 
@@ -419,111 +416,12 @@ class HermesController(private val app: Application) {
             refreshCurrentSession()
             return
         }
-        if (state.settings.shareTelegramSession) {
-            val last = state.settings.lastSessionId
-            val lastIsTelegram = last != null &&
-                state.sessions.any { it.id == last && it.source == "telegram" }
-            val target = if (lastIsTelegram) last else findLatestTelegramSession()
-            if (target != null && resumeSession(target, keepOnFailure = false)) return
-        }
         val last = state.settings.lastSessionId
         if (!last.isNullOrBlank()) {
             val resumed = resumeSession(last, keepOnFailure = false)
             if (resumed) return
         }
         createSession()
-    }
-
-    private suspend fun findLatestTelegramSession(): String? {
-        val client = rpc ?: return null
-        return runCatching {
-            client.call("session.list", jsonObject("limit" to 80))
-                .objects("sessions")
-                .firstOrNull { it.str("source").equals("telegram", ignoreCase = true) }
-                ?.strOrNull("id")
-        }.getOrNull()
-    }
-
-    /**
-     * The Telegram gateway and the dashboard are separate processes. Telegram reloads the
-     * transcript from the DB before every turn, so it sees our messages. Our own live session
-     * keeps an in-memory mirror, so if Telegram wrote in the meantime we close and cold-resume
-     * the stored session to pick those rows up. The DB turn lease already serializes concurrent
-     * writes, so this is only about context freshness.
-     */
-    private suspend fun syncSharedSession() {
-        val state = _ui.value
-        if (!state.settings.shareTelegramSession || syncingHistory) return
-        val stored = state.currentStoredId ?: return
-        val client = rpc ?: return
-        syncingHistory = true
-        try {
-            val rows = client.call("session.list", jsonObject("limit" to 80))
-                .objects("sessions")
-                .map { it.toSessionRow() }
-            val row = rows.firstOrNull { it.id == stored } ?: return
-            val dbCount = row.messageCount
-            if (dbCount <= lastKnownHistoryCount) return
-            if (state.currentRuntimeId != null && !state.running) {
-                runCatching {
-                    client.call("session.close", jsonObject("session_id" to state.currentRuntimeId))
-                }
-                val fresh = client.call(
-                    "session.resume",
-                    jsonObject(
-                        "session_id" to stored,
-                        "lazy" to false,
-                        "omit_messages" to true,
-                        "inline_images" to false,
-                    ),
-                )
-                applySessionMeta(fresh, fallbackStoredId = stored, fallbackTitle = row.title)
-                _ui.update {
-                    it.copy(
-                        notice = app.getString(
-                            R.string.telegram_history_refreshed,
-                            app.resources.getQuantityString(
-                                R.plurals.message_count,
-                                dbCount,
-                                dbCount,
-                            ),
-                        ),
-                    )
-                }
-                lastKnownHistoryCount = fresh.int("message_count", dbCount)
-            } else {
-                lastKnownHistoryCount = dbCount
-            }
-        } catch (error: Exception) {
-            _ui.update {
-                it.copy(
-                    notice = app.getString(
-                        R.string.telegram_history_failed,
-                        humanError(error),
-                    ),
-                )
-            }
-        } finally {
-            syncingHistory = false
-        }
-    }
-
-    private fun scheduleHistoryBaseline() {
-        if (!_ui.value.settings.shareTelegramSession) return
-        historySyncJob?.cancel()
-        historySyncJob = scope.launch {
-            delay(800)
-            val stored = _ui.value.currentStoredId ?: return@launch
-            val client = rpc ?: return@launch
-            runCatching {
-                val rows = client.call("session.list", jsonObject("limit" to 80))
-                    .objects("sessions")
-                    .map { it.toSessionRow() }
-                rows.firstOrNull { it.id == stored }?.messageCount
-            }.onSuccess { count ->
-                if (count != null) lastKnownHistoryCount = count
-            }
-        }
     }
 
     private suspend fun refreshCurrentSession() {
@@ -533,9 +431,6 @@ class HermesController(private val app: Application) {
         val stored = _ui.value.currentStoredId
         val runtime = _ui.value.currentRuntimeId
         val target = stored ?: runtime ?: return
-        val isTelegram = stored != null &&
-            _ui.value.sessions.any { it.id == stored && it.source == "telegram" }
-        val omit = isTelegram && _ui.value.settings.shareTelegramSession
         AppLog.add("refresh session target=$target (stored=${stored != null})")
         val result = runCatching {
             client.call(
@@ -543,21 +438,17 @@ class HermesController(private val app: Application) {
                 jsonObject(
                     "session_id" to target,
                     "lazy" to false,
-                    "omit_messages" to omit,
+                    "omit_messages" to false,
                     "inline_images" to false,
                 ),
             )
         }
         result.onSuccess { fresh ->
-            if (omit) {
-                applySessionMeta(fresh, fallbackStoredId = stored, fallbackTitle = _ui.value.title)
-            } else {
-                applySession(
-                    result = fresh,
-                    fallbackStoredId = stored,
-                    fallbackTitle = _ui.value.title,
-                )
-            }
+            applySession(
+                result = fresh,
+                fallbackStoredId = stored,
+                fallbackTitle = _ui.value.title,
+            )
         }.onFailure { error ->
             if (isSessionNotFound(error)) {
                 AppLog.add("stale session, recovering")
@@ -602,15 +493,11 @@ class HermesController(private val app: Application) {
             )
         }
         if (stored != null && resumeSession(stored, keepOnFailure = false)) return
-        val telegram = if (_ui.value.settings.shareTelegramSession) findLatestTelegramSession() else null
-        if (telegram != null && telegram != stored && resumeSession(telegram, keepOnFailure = false)) return
         createSession()
     }
 
     private suspend fun resumeSession(storedId: String, keepOnFailure: Boolean = true): Boolean {
         val client = rpc ?: return false
-        val isTelegram = _ui.value.sessions.any { it.id == storedId && it.source == "telegram" }
-        val omit = isTelegram && _ui.value.settings.shareTelegramSession
         AppLog.add("resume $storedId")
         val result = runCatching {
             client.call(
@@ -618,7 +505,7 @@ class HermesController(private val app: Application) {
                 jsonObject(
                     "session_id" to storedId,
                     "lazy" to false,
-                    "omit_messages" to omit,
+                    "omit_messages" to false,
                     "inline_images" to false,
                 ),
             )
@@ -658,32 +545,6 @@ class HermesController(private val app: Application) {
         }
     }
 
-    /** Update only the live ids/title/model, keeping the visible transcript untouched. */
-    private fun applySessionMeta(
-        result: JsonObject,
-        fallbackStoredId: String? = null,
-        fallbackTitle: String? = null,
-    ) {
-        val info = result.obj("info") ?: JsonObject(emptyMap())
-        val storedId = result.strOrNull("stored_session_id")
-            ?: result.strOrNull("session_key")
-            ?: fallbackStoredId
-        _ui.update {
-            it.copy(
-                currentRuntimeId = result.str("session_id").ifBlank { it.currentRuntimeId },
-                currentStoredId = storedId ?: it.currentStoredId,
-                title = info.str("title").ifBlank {
-                    fallbackTitle?.takeIf { title -> title.isNotBlank() } ?: it.title
-                },
-                model = info.str("model").ifBlank { it.model },
-                running = info.bool("running"),
-            )
-        }
-        if (!storedId.isNullOrBlank()) {
-            settingsStore.update { current -> current.copy(lastSessionId = storedId) }
-        }
-    }
-
     private fun applySession(
         result: JsonObject,
         fallbackStoredId: String? = null,
@@ -704,9 +565,6 @@ class HermesController(private val app: Application) {
         }
         val model = info.str("model")
         val running = info.bool("running") || result.bool("running")
-        lastKnownHistoryCount = result.int("message_count", messages.size)
-        val sharedEmpty = _ui.value.settings.shareTelegramSession &&
-            messages.isEmpty() && lastKnownHistoryCount > 0
         _ui.update {
             it.copy(
                 currentRuntimeId = runtimeId,
@@ -718,18 +576,6 @@ class HermesController(private val app: Application) {
                 error = null,
                 approval = null,
                 clarify = null,
-                notice = if (sharedEmpty) {
-                    app.getString(
-                        R.string.telegram_continues,
-                        app.resources.getQuantityString(
-                            R.plurals.message_count,
-                            lastKnownHistoryCount,
-                            lastKnownHistoryCount,
-                        ),
-                    )
-                } else {
-                    it.notice
-                },
             )
         }
         if (!storedId.isNullOrBlank()) {
@@ -756,6 +602,7 @@ class HermesController(private val app: Application) {
                     approval = null,
                     clarify = null,
                     error = null,
+                    showSessions = false,
                 )
             }
             createSession()
@@ -768,7 +615,9 @@ class HermesController(private val app: Application) {
         stopVoice()
         stopTts()
         scope.launch {
-            _ui.update { it.copy(error = null, messages = emptyList(), running = false) }
+            _ui.update {
+                it.copy(showSessions = false, error = null, messages = emptyList(), running = false)
+            }
             resumeSession(storedId)
         }
     }
@@ -1282,7 +1131,6 @@ class HermesController(private val app: Application) {
         scope.launch {
             try {
                 if (_ui.value.currentRuntimeId == null) createSession()
-                if (_ui.value.settings.shareTelegramSession) syncSharedSession()
                 val sid = _ui.value.currentRuntimeId ?: return@launch
                 val fileRefs = if (attachments.isNotEmpty()) {
                     _ui.update { it.copy(notice = app.getString(R.string.sending_attachments)) }
@@ -1553,7 +1401,6 @@ class HermesController(private val app: Application) {
             state.copy(messages = messages, running = false)
         }
         scheduleSessionsRefresh()
-        scheduleHistoryBaseline()
     }
 
     private fun appendThinking(delta: String) {
@@ -1980,6 +1827,10 @@ class HermesController(private val app: Application) {
     // ── Settings / onboarding ─────────────────────────────────────────────
 
     fun openSettings() = _ui.update { it.copy(showSettings = true) }
+
+    fun openSessions() = _ui.update { it.copy(showSessions = true) }
+
+    fun closeSessions() = _ui.update { it.copy(showSessions = false) }
 
     fun openActionPermissions() = _ui.update { it.copy(showActionPermissions = true) }
 

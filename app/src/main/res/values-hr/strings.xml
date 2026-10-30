@@ -43,6 +43,7 @@
     <string name="connect">Poveži</string>
     <string name="enable">Uključi</string>
     <string name="new_chat">Novi razgovor</string>
+    <string name="no_sessions">Još nema prethodnih sesija.</string>
     <string name="sessions">Razgovori</string>
     <string name="conversations_upper">RAZGOVORI</string>
     <string name="start">Pokreni</string>
@@ -183,8 +184,6 @@
     <string name="no_voices">Još nema popisa glasova. Otvori postavke glasa telefona i instaliraj hrvatski glas, ili odaberi Hermes Gabrijelu.</string>
     <string name="default_phone_voice">Zadani glas telefona</string>
     <string name="open_phone_voice_settings">Otvori postavke glasa telefona</string>
-    <string name="share_telegram">Dijeli sesiju s Telegramom</string>
-    <string name="share_telegram_desc">App nastavlja isti razgovor kao Telegram bot; povijest se osvježi prije svakog pitanja.</string>
     <string name="hands_free">Hands-free</string>
     <string name="hands_free_desc">Slušaj \"Hey Hermes\" dok je aplikacija u pozadini (traži mikrofon i stalnu notifikaciju).</string>
     <string name="open_listening_mode">Otvori u načinu slušanja</string>
@@ -240,9 +239,6 @@
     <!-- Controller errors and notices -->
     <string name="did_not_hear">Nisam te čuo. Pokušaj ponovno.</string>
     <string name="switching_to_hermes_stt">%1$s Prelazim na Hermes STT — ponovi pitanje.</string>
-    <string name="telegram_history_refreshed">Osvježena je povijest iz Telegrama (%1$s).</string>
-    <string name="telegram_history_failed">Sesija s Telegramom nije osvježena: %1$s</string>
-    <string name="telegram_continues">Nastavljaš Telegram razgovor — u povijesti je %1$s.</string>
     <string name="hermes_still_answering">Hermes još odgovara. Zaustavi ga prije novog pitanja.</string>
     <string name="not_connected_check_settings">Nisam povezan s Hermesom. Provjeri Postavke → Testiraj vezu.</string>
     <string name="connect_failed_network">Ne mogu se spojiti na server. Provjeri internet vezu.</string>

@@ -43,6 +43,7 @@
     <string name="connect">Connect</string>
     <string name="enable">Enable</string>
     <string name="new_chat">New chat</string>
+    <string name="no_sessions">No previous sessions yet.</string>
     <string name="sessions">Conversations</string>
     <string name="conversations_upper">CONVERSATIONS</string>
     <string name="start">Start</string>
@@ -182,8 +183,6 @@
     <string name="no_voices">No voice list yet. Open the phone voice settings and install a Croatian voice, or choose Hermes Gabrijela.</string>
     <string name="default_phone_voice">Default phone voice</string>
     <string name="open_phone_voice_settings">Open phone voice settings</string>
-    <string name="share_telegram">Share session with Telegram</string>
-    <string name="share_telegram_desc">The app continues the same conversation as the Telegram bot; history is refreshed before every question.</string>
     <string name="hands_free">Hands-free</string>
     <string name="hands_free_desc">Listen for \"Hey Hermes\" while the app is in the background (requires the microphone and a persistent notification).</string>
     <string name="open_listening_mode">Open in listening mode</string>
@@ -239,9 +238,6 @@
     <!-- Controller errors and notices -->
     <string name="did_not_hear">I did not hear you. Try again.</string>
     <string name="switching_to_hermes_stt">%1$s Switching to Hermes STT — repeat the question.</string>
-    <string name="telegram_history_refreshed">Telegram history refreshed (%1$s).</string>
-    <string name="telegram_history_failed">The Telegram session was not refreshed: %1$s</string>
-    <string name="telegram_continues">You are continuing a Telegram conversation — history has %1$s.</string>
     <string name="hermes_still_answering">Hermes is still answering. Stop it before a new question.</string>
     <string name="not_connected_check_settings">Not connected to Hermes. Check Settings → Test connection.</string>
     <string name="connect_failed_network">Can\'t reach the server. Check your internet connection.</string>

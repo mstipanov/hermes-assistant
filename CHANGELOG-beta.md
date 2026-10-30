@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta3
+- Telegram session sharing is gone: no "Share session with Telegram" switch, no automatic resume of the bot's session and no history sync. The app's conversations are now completely separate, and Telegram sessions are no longer listed in the app.
+- New history button on the main voice screen: it opens a sheet with the previous sessions, so you can jump back into an older conversation (or start a new one) without going through the chat drawer.
+- Starting a new session while Hermes is answering stops that turn first.
+
 ## 0.55-beta2
 - New-session button on the main voice screen (the "+" next to chat and settings), so a fresh conversation can be started without digging through the drawer.
 - Starting a new session while Hermes is answering now stops that turn first instead of leaving it running in the background.

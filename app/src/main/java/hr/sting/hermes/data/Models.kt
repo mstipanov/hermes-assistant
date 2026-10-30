@@ -125,6 +125,7 @@ data class HermesUiState(
     val showOnboarding: Boolean = true,
     val showSettings: Boolean = false,
     val showActionPermissions: Boolean = false,
+    val showSessions: Boolean = false,
     val link: LinkState = LinkState.Idle,
     val account: String = "",
     val sessions: List<SessionRow> = emptyList(),
