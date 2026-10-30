@@ -2,6 +2,9 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
+    // Reads app/google-services.json and wires the Firebase project (hermes-assistant-hr) into
+    // the build. The build FAILS without that file, so a fresh clone has to bring it.
+    id("com.google.gms.google-services") version "4.4.3"
     id("org.jetbrains.kotlin.plugin.compose") version "2.4.20"
     id("org.jetbrains.kotlin.plugin.serialization") version "2.4.20"
 }
@@ -26,6 +29,9 @@ android {
         // The in-app updater reads <UPDATE_BASE_URL>/version and only installs APKs from that
         // host. The beta build type overrides it so betas update from the beta channel.
         buildConfigField("String", "UPDATE_BASE_URL", "\"https://hermes-assistant.sting.hr\"")
+        // Push relay that keeps the FCM registration token for this phone (POST /api/token).
+        // Both build types use it: FCM tokens belong to one Firebase project, not to a channel.
+        buildConfigField("String", "PUSH_BASE_URL", "\"https://push.sting.hr\"")
         ndk {
             abiFilters += listOf("arm64-v8a")
         }
@@ -97,6 +103,7 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.9.0")
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("com.google.firebase:firebase-messaging:24.1.2")
     implementation(files("libs/sherpa-onnx-1.13.8.aar"))
 
     debugImplementation("androidx.compose.ui:ui-tooling")

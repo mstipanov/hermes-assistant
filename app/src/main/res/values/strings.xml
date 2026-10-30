@@ -318,9 +318,11 @@
     <string name="kws_no_stream">KeywordSpotter did not create a stream</string>
     <string name="files_channel_name">Received files</string>
     <string name="file_received_title">File received</string>
-    <string name="jobs_channel_name">Job decisions</string>
+    <string name="jobs_channel_name">Jobs</string>
     <string name="job_decision_title">A job needs your decision</string>
     <string name="job_decision_body">%1$s\n%2$s</string>
+    <string name="job_finished_title">Job finished</string>
+    <string name="job_finished_body">Tap to open the job</string>
 
     <!-- Device actions -->
     <string name="unknown_action">Unknown action: %1$s</string>

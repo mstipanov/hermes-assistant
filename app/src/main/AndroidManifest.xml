@@ -48,6 +48,12 @@
             android:name="android.app.shortcuts"
             android:resource="@xml/shortcuts" />
 
+        <!-- A notification-type FCM payload (if the server ever sends one instead of the
+             data-only kind) lands in the same channel JobNotifier posts to, not FCM's fallback. -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="jobs" />
+
         <activity
             android:name=".MainActivity"
             android:exported="true"
@@ -63,6 +69,16 @@
             android:name=".voice.HermesService"
             android:exported="false"
             android:foregroundServiceType="microphone" />
+
+        <!-- The push half of job notifications: FCM starts this even when the app process is
+             dead, so a job that parks on a DECISION reaches the phone. -->
+        <service
+            android:name=".device.HermesMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
 
         <service
             android:name=".device.HermesNotificationListener"
