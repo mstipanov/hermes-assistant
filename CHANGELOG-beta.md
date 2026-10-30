@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta4
+- Settings is now a short menu instead of one long scroll: **Connection**, **Voice**, **Assistant & permissions**, **Updates** and **Diagnostics**, each opening its own page with a back arrow.
+- The connection page holds the server/token/Access fields together with Save, Test connection and Reconnect; voice tests stay on the Voice page; the permission matrix lives under Assistant & permissions; logs, diagnostics and sign out under Diagnostics.
+- Every entry shows a one-line summary (server URL, STT/microphone mode, version, available update).
+
 ## 0.55-beta3
 - Telegram session sharing is gone: no "Share session with Telegram" switch, no automatic resume of the bot's session and no history sync. The app's conversations are now completely separate, and Telegram sessions are no longer listed in the app.
 - New history button on the main voice screen: it opens a sheet with the previous sessions, so you can jump back into an older conversation (or start a new one) without going through the chat drawer.

@@ -550,4 +550,11 @@
     <string name="screen_capture_unavailable">Screen capture is not available.</string>
     <string name="screen_capture_channel">Screen capture</string>
     <string name="screen_capture_title">Capturing the screen…</string>
+    <string name="settings_page_assistant">Assistant &amp; permissions</string>
+    <string name="settings_connection_desc">Server, token and Cloudflare Access</string>
+    <string name="settings_assistant_desc">Default assistant, device actions, app permissions</string>
+    <string name="settings_updates_desc">Version and in-app update</string>
+    <string name="settings_advanced_desc">Diagnostics, logs and sign out</string>
+    <string name="settings_home_note">Changes on the other pages apply immediately; connection details are saved with Save.</string>
+    <string name="test_voice_section">Test voice</string>
 </resources>

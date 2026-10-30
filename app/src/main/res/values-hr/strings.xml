@@ -551,4 +551,11 @@
     <string name="screen_capture_unavailable">Snimanje ekrana nije dostupno.</string>
     <string name="screen_capture_channel">Snimanje ekrana</string>
     <string name="screen_capture_title">Snimam ekran…</string>
+    <string name="settings_page_assistant">Asistent i dozvole</string>
+    <string name="settings_connection_desc">Server, token i Cloudflare Access</string>
+    <string name="settings_assistant_desc">Zadani asistent, akcije uređaja, dozvole aplikacije</string>
+    <string name="settings_updates_desc">Verzija i ažuriranje u aplikaciji</string>
+    <string name="settings_advanced_desc">Dijagnostika, logovi i odjava</string>
+    <string name="settings_home_note">Promjene na ostalim stranicama vrijede odmah; podaci za vezu spremaju se gumbom Spremi.</string>
+    <string name="test_voice_section">Testiraj glas</string>
 </resources>
