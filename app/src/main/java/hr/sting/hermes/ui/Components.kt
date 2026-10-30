@@ -641,7 +641,11 @@ fun SessionRowItem(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    color = if (session.needsDecision) {
+                        MaterialTheme.colorScheme.error
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
                 )
             }
             val messages = pluralStringResource(
@@ -657,6 +661,7 @@ fun SessionRowItem(
             val job = when {
                 !session.isJob -> ""
                 session.running -> " · " + stringResource(R.string.job_running)
+                session.needsDecision -> " · " + stringResource(R.string.job_decision)
                 else -> " · " + stringResource(R.string.job_done)
             }
             Text(

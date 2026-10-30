@@ -8,6 +8,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.Uri
+import android.os.SystemClock
 import android.provider.Settings
 import android.util.Base64
 import kotlinx.coroutines.CoroutineScope
@@ -138,6 +139,8 @@ class HermesController(private val app: Application) {
     private var voiceJob: Job? = null
     private var ttsStarted = false
     private var turnWatchdogJob: Job? = null
+    /** Monotonic [SystemClock.elapsedRealtime] stamp of the last event/request of the live turn. */
+    @Volatile private var lastEventAt = 0L
     private var liveStt: LiveStt? = null
     private val manualTranscript = StringBuilder()
     @Volatile private var manualGoogleActive = false
@@ -1473,6 +1476,9 @@ class HermesController(private val app: Application) {
             if (event.type == "sessions.changed") scheduleSessionsRefresh()
             return
         }
+        // Every event of the visible session is proof the turn is still alive: deltas,
+        // thinking, tool chatter and plain status events all push the silence deadline out.
+        lastEventAt = SystemClock.elapsedRealtime()
         when (event.type) {
             "message.start" -> addAssistantPlaceholder()
             "message.delta" -> {
@@ -1692,11 +1698,19 @@ class HermesController(private val app: Application) {
 
     private fun startTurnWatchdog() {
         turnWatchdogJob?.cancel()
+        lastEventAt = SystemClock.elapsedRealtime()
         turnWatchdogJob = scope.launch {
             // A tool can run for minutes without another event; only a long total
-            // silence means the turn is really gone.
-            delay(TURN_SILENCE_TIMEOUT_MS)
-            if (_ui.value.running) {
+            // silence means the turn is really gone. Poll the timestamp instead of
+            // sleeping once: a turn that streams for ten minutes, or that waits on an
+            // unanswered approval, keeps re-arming itself and must not be killed.
+            while (true) {
+                val idleMs = SystemClock.elapsedRealtime() - lastEventAt
+                if (idleMs < TURN_SILENCE_TIMEOUT_MS) {
+                    delay(TURN_SILENCE_TIMEOUT_MS - idleMs)
+                    continue
+                }
+                if (!_ui.value.running) return@launch
                 AppLog.add("turn watchdog: no events for ${TURN_SILENCE_TIMEOUT_MS / 1000}s")
                 _ui.update {
                     it.copy(
@@ -1705,6 +1719,20 @@ class HermesController(private val app: Application) {
                         error = app.getString(R.string.turn_timeout),
                     )
                 }
+                // The server turn keeps running on its own; leaving it behind makes the
+                // next prompt.submit fail with "active turn lease".
+                val client = rpc
+                val sid = _ui.value.currentRuntimeId
+                if (client != null && sid != null) {
+                    runCatching {
+                        client.call(
+                            "session.interrupt",
+                            jsonObject("session_id" to sid),
+                            timeoutMs = 10_000,
+                        )
+                    }
+                }
+                return@launch
             }
         }
     }
@@ -1725,6 +1753,9 @@ class HermesController(private val app: Application) {
             request.method == "clarify" ||
             request.method == "device.action"
         ) {
+            // The turn is parked waiting for the user (approval can stay open for minutes);
+            // that is activity, not silence, so the watchdog must not kill it.
+            lastEventAt = SystemClock.elapsedRealtime()
             awaitingAutoListen = false
             autoListenJob?.cancel()
         }

@@ -49,6 +49,7 @@
     <string name="jobs_upper">ZADACI</string>
     <string name="job_running">radi</string>
     <string name="job_done">gotovo</string>
+    <string name="job_decision">traži odluku</string>
     <string name="start">Pokreni</string>
     <string name="set_up">Postavi</string>
     <string name="attachment">Prilog</string>

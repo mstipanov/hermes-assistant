@@ -68,6 +68,9 @@ data class SessionRow(
     /** A job session that has not finished yet. */
     val running: Boolean get() = isJob && endedAt == null
 
+    /** The job parked on a question (its last message carries the DECISION: line). */
+    val needsDecision: Boolean get() = isJob && preview.contains("DECISION:")
+
     companion object {
         // Sessions started outside the phone: a CLI job run (`hermes chat -q --source cli`,
         // which the gateway stores as "local"), a kanban worker, or a headless oneshot run.

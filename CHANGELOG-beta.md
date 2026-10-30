@@ -3,6 +3,12 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta11
+- **Switching sessions stops the turn you are leaving.** The abandoned turn no longer keeps running (and spending) on the server, a message typed during the switch can no longer land in the previous session, and two quick taps no longer race — the newest switch wins.
+- **The watchdog measures silence, not total time.** A turn that streams for ten minutes, or that waits on an approval, is no longer declared dead halfway through; if the watchdog does fire, it also stops the server turn so the next message is not rejected with "active turn lease".
+- **Chat no longer yanks you to the bottom** while you are scrolled up reading history; new messages follow the bottom only when you are already there.
+- Job rows in "Zadaci" now show **"needs a decision"** (red) when a job parks on a `DECISION:` question.
+
 ## 0.55-beta10
 - **"Zadaci" in the session switcher.** Sessions started outside the phone — a long CLI job run, a kanban worker, a headless run — now appear in their own group above the conversations, with a running/done status, and open like any other chat. Long work can run there while the phone conversation stays free.
 - **Attachment thumbnails are decoded off the main thread** (downsampled to the 42 dp slot), so adding a photo no longer blocks the UI or materialises a full-resolution bitmap.

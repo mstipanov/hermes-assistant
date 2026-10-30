@@ -21,7 +21,7 @@ android {
         applicationId = "hr.sting.hermes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 64
+        versionCode = 65
         versionName = "0.55"
         // The in-app updater reads <UPDATE_BASE_URL>/version and only installs APKs from that
         // host. The beta build type overrides it so betas update from the beta channel.
