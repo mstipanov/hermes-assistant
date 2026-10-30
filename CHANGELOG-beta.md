@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta14
+- **"Zadaci" stay fresh.** The session list refreshes every 60 seconds while connected, so a job that finished stops showing "radi" and a parked job shows "traži odluku".
+- **The app tells you when a job needs a decision**, and tapping the notification opens that job's session so you can answer it right there.
+- **Firebase Cloud Messaging is wired in** (project hermes-assistant-hr): the app registers a push token, so job notifications can arrive as real pushes instead of waiting for the next app open.
+
 ## 0.55-beta13
 - **Messages typed while Hermes is answering are queued, not dropped.** Keep typing while a turn runs: a row above the composer shows what is waiting (with an X to drop it) and the message is sent as soon as the turn ends. The queue belongs to the conversation it was typed in — switching sessions drops it rather than posting it elsewhere.
 
