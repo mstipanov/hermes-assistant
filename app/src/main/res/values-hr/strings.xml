@@ -257,7 +257,13 @@
     <string name="server_connection_not_open">Veza sa serverom nije otvorena</string>
     <string name="attachment_named_too_large">%1$s je prevelik (max 8 MB).</string>
     <string name="attached_file_prefix">Priložena datoteka: </string>
-    <string name="hermes_still_answering_stop">Hermes još odgovara. Pričekaj odgovor ili pritisni Stop.</string>
+    <string name="message_queued">Poruka čeka — poslat će se kad Hermes završi.</string>
+    <plurals name="queued_waiting">
+        <item quantity="one">%1$d poruka čeka</item>
+        <item quantity="few">%1$d poruke čekaju</item>
+        <item quantity="other">%1$d poruka čeka</item>
+    </plurals>
+    <string name="queued_drop">Ukloni poruku iz reda</string>
     <string name="voice_replies_disabled_text_only">Glasovni odgovori su isključeni u Postavkama — odgovor je samo tekst.</string>
     <string name="sending_attachments">Šaljem priloge…</string>
     <string name="attachment_prompt">Pogledaj priloge i reci mi što vidiš.</string>

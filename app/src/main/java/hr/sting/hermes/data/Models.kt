@@ -53,6 +53,16 @@ data class PendingAttachment(
     val kind: AttachmentKind,
 )
 
+/**
+ * A message typed while a turn was running. It waits in [HermesUiState.queued] and
+ * goes out when the turn ends. The attachments are snapshotted with the text so the
+ * composer can be cleared straight away for the next message.
+ */
+data class QueuedMessage(
+    val text: String,
+    val attachments: List<PendingAttachment> = emptyList(),
+)
+
 data class SessionRow(
     val id: String,
     val title: String,
@@ -168,6 +178,8 @@ data class HermesUiState(
     val lastTurnFromVoice: Boolean = false,
     val partialTranscript: String = "",
     val pendingAttachments: List<PendingAttachment> = emptyList(),
+    /** Messages typed while a turn was running; one goes out per finished turn. */
+    val queued: List<QueuedMessage> = emptyList(),
     val androidTtsVoices: List<TtsVoiceOption> = emptyList(),
     val update: UpdateUiState = UpdateUiState(),
 ) {

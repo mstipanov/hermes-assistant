@@ -33,6 +33,7 @@ import hr.sting.hermes.data.HermesUiState
 import hr.sting.hermes.data.LinkState
 import hr.sting.hermes.data.MessageRole
 import hr.sting.hermes.data.PendingAttachment
+import hr.sting.hermes.data.QueuedMessage
 import hr.sting.hermes.data.SessionRow
 import hr.sting.hermes.data.RpcError
 import hr.sting.hermes.data.SettingsStore
@@ -139,6 +140,8 @@ class HermesController(private val app: Application) {
     private var voiceJob: Job? = null
     private var ttsStarted = false
     private var turnWatchdogJob: Job? = null
+    /** Pending "send the next queued message" after a turn ended. */
+    private var drainJob: Job? = null
     /** Monotonic [SystemClock.elapsedRealtime] stamp of the last event/request of the live turn. */
     @Volatile private var lastEventAt = 0L
     private var liveStt: LiveStt? = null
@@ -670,6 +673,8 @@ class HermesController(private val app: Application) {
         // Leaving for a fresh session also invalidates a switch still in flight.
         switchJob?.cancel()
         switchGeneration++
+        // The queue belongs to the conversation being left: it must never land in the new one.
+        _ui.update { it.copy(queued = emptyList()) }
         // Abandoning the conversation must also stop the server turn; otherwise it
         // keeps running (and spending tokens) in a session nobody is looking at.
         if (_ui.value.running) interrupt()
@@ -695,6 +700,8 @@ class HermesController(private val app: Application) {
     fun selectSession(storedId: String) {
         awaitingAutoListen = false
         autoListenJob?.cancel()
+        // The queue belongs to the conversation being left: it must never land in the new one.
+        _ui.update { it.copy(queued = emptyList()) }
         // Leaving the conversation must also stop the server turn (see newChat()); otherwise
         // the abandoned turn keeps running and spending tokens in a session nobody watches.
         if (_ui.value.running) interrupt()
@@ -1310,12 +1317,36 @@ class HermesController(private val app: Application) {
         val attachments = _ui.value.pendingAttachments
         if (trimmed.isEmpty() && attachments.isEmpty()) return
         awaitingAutoListen = fromVoice
+        // A turn is running: the message waits instead of being thrown away, and the
+        // composer is free for the next one.
         if (_ui.value.running) {
             _ui.update {
-                it.copy(notice = app.getString(R.string.hermes_still_answering_stop))
+                it.copy(
+                    queued = it.queued + QueuedMessage(text = trimmed, attachments = attachments),
+                    input = "",
+                    pendingAttachments = emptyList(),
+                    notice = app.getString(R.string.message_queued),
+                )
             }
+            AppLog.add("message queued (${trimmed.length} chars, ${attachments.size} files)")
             return
         }
+        if (!submitTurn(trimmed, attachments, fromVoice)) return
+        // The text and the attachments belong to the turn now; whatever is typed next is a
+        // new message (it may be typed while this turn runs).
+        _ui.update { it.copy(input = "", pendingAttachments = emptyList()) }
+    }
+
+    /**
+     * Send one message. The direct path from [sendMessage] and the only path a queued
+     * message takes ([drainQueue]). Returns false when the message could not be taken
+     * because the link is down.
+     */
+    private fun submitTurn(
+        trimmed: String,
+        attachments: List<PendingAttachment>,
+        fromVoice: Boolean,
+    ): Boolean {
         val client = rpc
         if (client == null || !client.isReady()) {
             _ui.update {
@@ -1323,7 +1354,7 @@ class HermesController(private val app: Application) {
                     error = app.getString(R.string.not_connected_check_settings),
                 )
             }
-            return
+            return false
         }
         stopTts()
         turnReply.clear()
@@ -1345,7 +1376,7 @@ class HermesController(private val app: Application) {
                 val fileRefs = if (attachments.isNotEmpty()) {
                     _ui.update { it.copy(notice = app.getString(R.string.sending_attachments)) }
                     val refs = uploadAttachments(sid, attachments)
-                    _ui.update { it.copy(pendingAttachments = emptyList(), notice = null) }
+                    _ui.update { it.copy(notice = null) }
                     refs
                 } else {
                     emptyList()
@@ -1365,7 +1396,6 @@ class HermesController(private val app: Application) {
                 val userMessage = ChatMessage(role = MessageRole.USER, text = displayText)
                 _ui.update {
                     it.copy(
-                        input = "",
                         running = true,
                         error = null,
                         lastTurnFromVoice = fromVoice,
@@ -1422,12 +1452,59 @@ class HermesController(private val app: Application) {
             } catch (error: Exception) {
                 AppLog.add("send failed: ${humanError(error)}")
                 _ui.update {
+                    // A failed send must not cost what the user typed: if the composer is
+                    // still untouched, the message goes back into it.
+                    val restore = it.input.isBlank() && it.pendingAttachments.isEmpty()
                     it.copy(
                         running = false,
                         voiceState = "idle",
                         error = humanError(error),
+                        input = if (restore) trimmed else it.input,
+                        pendingAttachments = if (restore) attachments else it.pendingAttachments,
                     )
                 }
+                drainQueue()
+            }
+        }
+        return true
+    }
+
+    /**
+     * The turn just ended: send the next queued message, at most one per turn. Never
+     * sends while the turn is still running and never while the link is down — a queued
+     * message outlives a reconnect.
+     */
+    private fun drainQueue() {
+        // A message.complete can be an interim one: the same turn continues with a tool and
+        // re-arms [HermesUiState.running]. Draining a moment later lets that happen first,
+        // so the queue never races the server into an "active turn lease" rejection.
+        drainJob?.cancel()
+        drainJob = scope.launch {
+            delay(QUEUE_DRAIN_DELAY_MS)
+            sendNextQueued()
+        }
+    }
+
+    private fun sendNextQueued() {
+        val state = _ui.value
+        if (state.running || state.queued.isEmpty()) return
+        if (state.link !is LinkState.Ready || rpc?.isReady() != true) return
+        val next = state.queued.first()
+        _ui.update { it.copy(queued = it.queued.drop(1)) }
+        AppLog.add("queue: sending next (${next.text.length} chars, ${next.attachments.size} files)")
+        if (!submitTurn(next.text, next.attachments, fromVoice = false)) {
+            // A link that dropped between the check and the send must not cost a message.
+            _ui.update { it.copy(queued = listOf(next) + it.queued) }
+        }
+    }
+
+    /** Drop one waiting message (the X on the queue row). */
+    fun removeQueued(index: Int) {
+        _ui.update { state ->
+            if (index !in state.queued.indices) {
+                state
+            } else {
+                state.copy(queued = state.queued.filterIndexed { i, _ -> i != index })
             }
         }
     }
@@ -1453,12 +1530,19 @@ class HermesController(private val app: Application) {
                 },
             )
         }
-        val client = rpc ?: return
-        val sid = _ui.value.currentRuntimeId ?: return
+        val client = rpc
+        val sid = _ui.value.currentRuntimeId
+        if (client == null || sid == null) {
+            drainQueue()
+            return
+        }
         scope.launch {
             runCatching {
                 client.call("session.interrupt", jsonObject("session_id" to sid), timeoutMs = 10_000)
             }
+            // The server turn is gone only once the interrupt landed; the next queued message
+            // waits for that instead of racing into an "active turn lease" rejection.
+            drainQueue()
         }
     }
 
@@ -1551,6 +1635,7 @@ class HermesController(private val app: Application) {
                 speakThisTurn = false
                 stopTts()
                 _ui.update { it.copy(error = message, running = false, voiceState = "idle") }
+                drainQueue()
             }
             "approval.cancelled" -> _ui.update { it.copy(approval = null) }
             "request.cancel" -> {
@@ -1565,7 +1650,12 @@ class HermesController(private val app: Application) {
             "sessions.changed" -> scheduleSessionsRefresh()
             "status.update" -> {
                 val running = event.payload["running"]?.toString()?.toBooleanStrictOrNull()
-                if (running != null) _ui.update { it.copy(running = running) }
+                if (running != null) {
+                    _ui.update { it.copy(running = running) }
+                    // The server says the turn is over; a queue left over from a missing
+                    // message.complete must not stall here.
+                    if (!running) drainQueue()
+                }
             }
         }
     }
@@ -1632,6 +1722,8 @@ class HermesController(private val app: Application) {
             state.copy(messages = messages, running = false)
         }
         scheduleSessionsRefresh()
+        // The turn is over: the next message typed while it ran may go now.
+        drainQueue()
     }
 
     private fun appendThinking(delta: String) {
@@ -1732,6 +1824,7 @@ class HermesController(private val app: Application) {
                         )
                     }
                 }
+                drainQueue()
                 return@launch
             }
         }
@@ -2505,6 +2598,9 @@ class HermesController(private val app: Application) {
 
         /** No event at all for this long means the turn is gone (tools may run for minutes). */
         const val TURN_SILENCE_TIMEOUT_MS = 10 * 60_000L
+
+        /** Lets an interim message.complete re-arm the running turn before the queue drains. */
+        const val QUEUE_DRAIN_DELAY_MS = 400L
     }
 
     fun shutdown() {

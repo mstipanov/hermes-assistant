@@ -123,6 +123,7 @@ class MainActivity : ComponentActivity() {
                         onStartVoiceService = core::startVoiceService,
                         onAddAttachment = core::addAttachment,
                         onRemoveAttachment = core::removeAttachment,
+                        onRemoveQueued = core::removeQueued,
                         onFileRetry = core::retryFile,
                         onBackToVoice = {
                             core.stopVoice()

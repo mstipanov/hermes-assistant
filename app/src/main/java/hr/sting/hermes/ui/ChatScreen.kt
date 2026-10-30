@@ -78,6 +78,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.core.content.ContextCompat
 import hr.sting.hermes.R
@@ -126,6 +127,7 @@ fun ChatScreen(
     onBackToVoice: (() -> Unit)? = null,
     onAddAttachment: (PendingAttachment) -> Unit = {},
     onRemoveAttachment: (String) -> Unit = {},
+    onRemoveQueued: (Int) -> Unit = {},
     onFileRetry: (String) -> Unit = {},
 ) {
     BackHandler(enabled = onBackToVoice != null) { onBackToVoice?.invoke() }
@@ -374,6 +376,17 @@ fun ChatScreen(
                             onDeny = { onConfirmDeviceAction(false) },
                         )
                     }
+                }
+
+                val firstQueued = state.queued.firstOrNull()
+                if (firstQueued != null) {
+                    QueuedRow(
+                        count = state.queued.size,
+                        preview = firstQueued.text.ifBlank {
+                            firstQueued.attachments.joinToString(", ") { it.name }
+                        },
+                        onDrop = { onRemoveQueued(0) },
+                    )
                 }
 
                 InputBar(
@@ -727,6 +740,47 @@ private fun VoicePanel(
 }
 
 @Composable
+private fun QueuedRow(count: Int, preview: String, onDrop: () -> Unit) {
+    Surface(
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        shape = RoundedCornerShape(16.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 12.dp, vertical = 4.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(start = 14.dp, top = 4.dp, bottom = 4.dp, end = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = pluralStringResource(R.plurals.queued_waiting, count, count),
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                if (preview.isNotBlank()) {
+                    Text(
+                        text = preview,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+            IconButton(onClick = onDrop) {
+                Icon(
+                    Icons.Filled.Close,
+                    contentDescription = stringResource(R.string.queued_drop),
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun InputBar(
     value: String,
     running: Boolean,
@@ -825,18 +879,19 @@ private fun InputBar(
                         tint = MaterialTheme.colorScheme.error,
                     )
                 }
-            } else {
-                IconButton(onClick = onSend, enabled = value.isNotBlank() || hasAttachments) {
-                    Icon(
-                        Icons.Filled.Send,
-                        contentDescription = stringResource(R.string.send),
-                        tint = if (value.isNotBlank() || hasAttachments) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                }
+            }
+            // Typing is allowed while a turn runs: Send then queues the message instead of
+            // losing it, so the button stays next to Stop.
+            IconButton(onClick = onSend, enabled = value.isNotBlank() || hasAttachments) {
+                Icon(
+                    Icons.Filled.Send,
+                    contentDescription = stringResource(R.string.send),
+                    tint = if (value.isNotBlank() || hasAttachments) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                )
             }
         }
     }

@@ -256,7 +256,12 @@
     <string name="server_connection_not_open">The server connection is not open.</string>
     <string name="attachment_named_too_large">%1$s is too large (max 8 MB).</string>
     <string name="attached_file_prefix">Attached file: </string>
-    <string name="hermes_still_answering_stop">Hermes is still answering. Wait for the answer or press Stop.</string>
+    <string name="message_queued">Message queued — it goes out when Hermes finishes.</string>
+    <plurals name="queued_waiting">
+        <item quantity="one">%1$d message waiting</item>
+        <item quantity="other">%1$d messages waiting</item>
+    </plurals>
+    <string name="queued_drop">Drop queued message</string>
     <string name="voice_replies_disabled_text_only">Voice replies are disabled in Settings — the answer is text only.</string>
     <string name="sending_attachments">Sending attachments…</string>
     <string name="attachment_prompt">Look at the attachments and tell me what you see.</string>
