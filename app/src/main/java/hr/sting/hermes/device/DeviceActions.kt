@@ -32,8 +32,11 @@ import android.provider.Telephony
 import android.util.Base64
 import android.view.KeyEvent
 import androidx.core.content.ContextCompat
+import com.google.firebase.messaging.FirebaseMessaging
+import hr.sting.hermes.BuildConfig
 import hr.sting.hermes.MainActivity
 import hr.sting.hermes.R
+import hr.sting.hermes.data.SettingsStore
 import hr.sting.hermes.data.bool
 import hr.sting.hermes.data.int
 import hr.sting.hermes.data.jsonObject
@@ -41,7 +44,9 @@ import hr.sting.hermes.data.long
 import hr.sting.hermes.data.str
 import hr.sting.hermes.util.AppLog
 import hr.sting.hermes.util.TrustedLaunch
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.json.JsonArray
@@ -62,6 +67,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
+import kotlin.coroutines.resume
 
 /**
  * Android-side executor for the Hermes `android_device` tool. Every action is a
@@ -74,6 +80,9 @@ object DeviceActions {
     var speaker: ((String) -> Unit)? = null
 
     @Volatile private var torchOn = false
+
+    /** Longest `device_status` waits for Firebase to hand over the registration token. */
+    private const val FCM_TOKEN_TIMEOUT_MS = 3_000L
 
     suspend fun execute(context: Context, params: JsonObject): JsonObject = withContext(Dispatchers.IO) {
         val raw = params.str("action").lowercase()
@@ -571,7 +580,7 @@ object DeviceActions {
     }
 
     @Suppress("DEPRECATION")
-    private fun deviceStatus(context: Context): JsonObject {
+    private suspend fun deviceStatus(context: Context): JsonObject {
         val battery = context.getSystemService(BatteryManager::class.java)
         val level = battery?.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY) ?: -1
         val charging = battery?.isCharging ?: false
@@ -615,7 +624,46 @@ object DeviceActions {
             "storage_total_gb" to String.format(Locale.US, "%.1f", totalGb),
             "model" to "${Build.MANUFACTURER} ${Build.MODEL}",
             "android" to Build.VERSION.RELEASE,
+            "app_version" to BuildConfig.VERSION_NAME,
+            "version_code" to BuildConfig.VERSION_CODE,
+            "fcm_token" to fcmToken(context),
         )
+    }
+
+    /**
+     * The FCM registration token, or "" when Firebase has not handed one out yet.
+     *
+     * The fetch can hang on a cold start or an offline phone, so it is capped at
+     * [FCM_TOKEN_TIMEOUT_MS]; the last token seen is kept in settings so a timed-out or failed
+     * fetch still answers with the previous value instead of nothing.
+     */
+    private suspend fun fcmToken(context: Context): String {
+        val store = SettingsStore.shared(context)
+        val cached = store.current.fcmToken
+        val live = try {
+            withTimeoutOrNull(FCM_TOKEN_TIMEOUT_MS) { awaitFcmToken() }.orEmpty()
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (error: Exception) {
+            AppLog.add("FCM token unavailable: ${error.message}")
+            ""
+        }
+        if (live.isBlank()) return cached
+        if (live != cached) {
+            // A token is a credential for this phone: it goes into the settings, never AppLog.
+            store.update { it.copy(fcmToken = live) }
+        }
+        return live
+    }
+
+    /** [FirebaseMessaging.getToken] as a coroutine; the listener arrives on the main thread. */
+    private suspend fun awaitFcmToken(): String? {
+        val task = runCatching { FirebaseMessaging.getInstance().token }.getOrNull() ?: return null
+        return suspendCancellableCoroutine<String?> { cont ->
+            task.addOnCompleteListener { done ->
+                cont.resume(if (done.isSuccessful) done.result.orEmpty() else null)
+            }
+        }
     }
 
     private fun percentOf(audio: AudioManager?, stream: Int): Int {

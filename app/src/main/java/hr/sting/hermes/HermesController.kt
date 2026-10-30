@@ -104,7 +104,7 @@ import javax.net.ssl.SSLException
 
 class HermesController(private val app: Application) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
-    private val settingsStore = SettingsStore(app)
+    private val settingsStore = SettingsStore.shared(app)
     private val recorder = AudioRecorder(app)
     private val tts = TtsPlayer(app)
     private val androidTts = AndroidTtsPlayer(app)

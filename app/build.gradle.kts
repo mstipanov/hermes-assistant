@@ -29,9 +29,6 @@ android {
         // The in-app updater reads <UPDATE_BASE_URL>/version and only installs APKs from that
         // host. The beta build type overrides it so betas update from the beta channel.
         buildConfigField("String", "UPDATE_BASE_URL", "\"https://hermes-assistant.sting.hr\"")
-        // Push relay that keeps the FCM registration token for this phone (POST /api/token).
-        // Both build types use it: FCM tokens belong to one Firebase project, not to a channel.
-        buildConfigField("String", "PUSH_BASE_URL", "\"https://push.sting.hr\"")
         ndk {
             abiFilters += listOf("arm64-v8a")
         }

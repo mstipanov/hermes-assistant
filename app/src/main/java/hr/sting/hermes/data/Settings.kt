@@ -30,6 +30,11 @@ data class AppSettings(
     val micMode: String = "auto",
     val ttsEngine: String = "android",
     val androidTtsVoice: String? = null,
+    /**
+     * Last FCM registration token this install saw. Cached so `device_status` can still answer
+     * while Firebase is slow to answer or the phone is offline.
+     */
+    val fcmToken: String = "",
     val hasCompletedOnboarding: Boolean = false,
 ) {
     val isConfigured: Boolean
@@ -53,6 +58,9 @@ class SettingsStore(context: Context) {
 
     val current: AppSettings get() = _settings.value
 
+    // The service and the controller are different threads writing the same blob; a lost write
+    // here would silently revert unrelated settings, so writes are serialized.
+    @Synchronized
     fun save(value: AppSettings) {
         // Values pasted from a file/terminal often carry trailing newlines; an
         // Authorization header with a newline is rejected by OkHttp and a token
@@ -68,6 +76,7 @@ class SettingsStore(context: Context) {
         secure.put(KEY, json.encodeToString(AppSettings.serializer(), normalized))
     }
 
+    @Synchronized
     fun update(transform: (AppSettings) -> AppSettings) = save(transform(current))
 
     fun clearCredentials() {
@@ -89,7 +98,18 @@ class SettingsStore(context: Context) {
             .getOrDefault(AppSettings())
     }
 
-    private companion object {
-        const val KEY = "settings-v1"
+    companion object {
+        private const val KEY = "settings-v1"
+
+        @Volatile private var sharedInstance: SettingsStore? = null
+
+        /**
+         * One store per process. A second instance would keep its own in-memory copy and overwrite
+         * the other's writes, and the FCM service caches the push token from a Firebase thread
+         * while the controller may be saving user settings.
+         */
+        fun shared(context: Context): SettingsStore = sharedInstance ?: synchronized(this) {
+            sharedInstance ?: SettingsStore(context.applicationContext).also { sharedInstance = it }
+        }
     }
 }

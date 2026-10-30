@@ -3,6 +3,7 @@ package hr.sting.hermes.device
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import hr.sting.hermes.R
+import hr.sting.hermes.data.SettingsStore
 import hr.sting.hermes.util.AppLog
 
 /**
@@ -21,12 +22,12 @@ import hr.sting.hermes.util.AppLog
  *   body       the question (optional; job_decision) or a short result (optional; job_done)
  */
 class HermesMessagingService : FirebaseMessagingService() {
-    /** A new token invalidates the one the relay knows; register it before it is ever needed. */
+    /** Cache a new token so `device_status` reports this one instead of the previous value. */
     override fun onNewToken(token: String) {
         AppLog.add("Push token refreshed")
-        // Firebase calls this on its own worker thread, but uploading here would hold that
-        // thread for the whole request, so the POST runs on a thread of its own.
-        PushRegistration.uploadAsync(this, token)
+        // The token is a credential for this phone: it is cached in the settings, never logged.
+        runCatching { SettingsStore.shared(this).update { it.copy(fcmToken = token) } }
+            .onFailure { AppLog.add("Push token cache failed: ${it.message}") }
     }
 
     override fun onMessageReceived(message: RemoteMessage) {
