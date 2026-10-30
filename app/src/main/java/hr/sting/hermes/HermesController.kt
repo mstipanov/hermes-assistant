@@ -56,6 +56,7 @@ import hr.sting.hermes.device.DeviceActions
 import hr.sting.hermes.device.FileInbox
 import hr.sting.hermes.device.FileNotifier
 import hr.sting.hermes.device.IncomingFile
+import hr.sting.hermes.device.JobNotifier
 import hr.sting.hermes.voice.AudioRecorder
 import androidx.core.content.ContextCompat
 import hr.sting.hermes.voice.AndroidSttRecognizer
@@ -80,6 +81,7 @@ import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -133,6 +135,10 @@ class HermesController(private val app: Application) {
     private var sessionsLoaded = false
     private var wasReady = false
     private var sessionsRefreshJob: Job? = null
+    /** Periodic [loadSessions] while the link is up, so a parked job is noticed off-screen. */
+    private var jobPollJob: Job? = null
+    /** Last DECISION preview already announced, per job session id. */
+    private val notifiedDecisions = mutableMapOf<String, String>()
     /** In-flight [selectSession] switch; starting a new one cancels the old round-trip. */
     private var switchJob: Job? = null
     /** Bumped by every switch so a resume that lands late cannot apply stale session state. */
@@ -402,12 +408,16 @@ class HermesController(private val app: Application) {
             client.state.collect { link ->
                 _ui.update { it.copy(link = link) }
                 if (link is LinkState.Ready) {
+                    // A job parks on its own session, where nothing here is watching events:
+                    // the list has to be polled while the link is up (see startJobPoll).
+                    startJobPoll()
                     if (!wasReady) {
                         wasReady = true
                         onReady()
                     }
                 } else {
                     wasReady = false
+                    stopJobPoll()
                 }
             }
         }
@@ -433,6 +443,7 @@ class HermesController(private val app: Application) {
     private fun stopRpc() {
         collectors.forEach { it.cancel() }
         collectors.clear()
+        stopJobPoll()
         deviceConfirmJob?.cancel()
         deviceConfirmJob = null
         rpc?.stop()
@@ -465,7 +476,57 @@ class HermesController(private val app: Application) {
                     jobs = rows.filter { row -> row.isJob },
                 )
             }
+            notifyParkedJobs(rows)
         }
+    }
+
+    /**
+     * Announce every job that is parked on a question, once per distinct preview.
+     *
+     * Jobs run headless on the server, so the phone never sees the turn stop at a DECISION
+     * unless it goes looking. The whole preview doubles as the question's identity: a preview
+     * that differs from the last one announced is a new question, the same preview is not.
+     */
+    private fun notifyParkedJobs(rows: List<SessionRow>) {
+        val parked = rows.filter { it.needsDecision }
+        // An answered job stops parking; forget it so its next question announces again.
+        notifiedDecisions.keys.retainAll(parked.map { it.id }.toSet())
+        parked.forEach { row ->
+            if (notifiedDecisions[row.id] == row.preview) return@forEach
+            notifiedDecisions[row.id] = row.preview
+            JobNotifier.notify(app, row.id, row.title, decisionText(row.preview))
+        }
+    }
+
+    /** The question itself, without the DECISION marker the app matches on. */
+    private fun decisionText(preview: String): String =
+        preview.lineSequence()
+            .firstOrNull { line -> line.contains("DECISION:") }
+            .orEmpty()
+            .substringAfter("DECISION:")
+            .trim()
+
+    /**
+     * Refresh the session list every [JOB_POLL_INTERVAL_MS] while the link is Ready.
+     *
+     * The dashboard only pushes `sessions.changed` for turns this process is attached to; a
+     * job that parks on its own session is invisible otherwise. Nothing is polled while the
+     * link is down, and the loop is cancelled the moment it drops.
+     */
+    private fun startJobPoll() {
+        if (jobPollJob?.isActive == true) return
+        jobPollJob = scope.launch {
+            while (isActive) {
+                delay(JOB_POLL_INTERVAL_MS)
+                if (rpc?.isReady() != true) continue
+                loadSessions()
+            }
+        }
+    }
+
+    private fun stopJobPoll() {
+        jobPollJob?.cancel()
+        jobPollJob = null
     }
 
     private suspend fun openInitialSession() {
@@ -2197,6 +2258,9 @@ class HermesController(private val app: Application) {
 
     fun openOnboarding() = _ui.update { it.copy(showOnboarding = true, showSettings = false) }
 
+    /** Leave the setup screen without saving (e.g. a notification opened a job over it). */
+    fun closeOnboarding() = _ui.update { it.copy(showOnboarding = false) }
+
     fun clearError() = _ui.update { it.copy(error = null, notice = null) }
 
     fun voiceComingSoon() = _ui.update {
@@ -2601,6 +2665,9 @@ class HermesController(private val app: Application) {
 
         /** Lets an interim message.complete re-arm the running turn before the queue drains. */
         const val QUEUE_DRAIN_DELAY_MS = 400L
+
+        /** How often the session list is refreshed so a parked job is noticed (see startJobPoll). */
+        const val JOB_POLL_INTERVAL_MS = 60_000L
     }
 
     fun shutdown() {

@@ -320,6 +320,9 @@
     <string name="kws_no_stream">KeywordSpotter nije stvorio stream</string>
     <string name="files_channel_name">Primljene datoteke</string>
     <string name="file_received_title">Datoteka primljena</string>
+    <string name="jobs_channel_name">Odluke zadataka</string>
+    <string name="job_decision_title">Zadatak traži tvoju odluku</string>
+    <string name="job_decision_body">%1$s\n%2$s</string>
 
     <!-- Device actions -->
     <string name="unknown_action">Nepoznata akcija: %1$s</string>

@@ -20,11 +20,14 @@ import hr.sting.hermes.ui.ChatScreen
 import hr.sting.hermes.ui.HermesTheme
 import hr.sting.hermes.ui.OnboardingScreen
 import hr.sting.hermes.data.LinkState
+import hr.sting.hermes.device.JobNotifier
 import hr.sting.hermes.ui.SettingsScreen
 import hr.sting.hermes.util.TrustedLaunch
 
 class MainActivity : ComponentActivity() {
     private var pendingListen by mutableStateOf(false)
+    /** Job session a notification asked for, opened once the link is up. */
+    private var pendingSessionId by mutableStateOf<String?>(null)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -36,6 +39,9 @@ class MainActivity : ComponentActivity() {
         // able to open the microphone; only in-process components set this flag.
         val trustedListen = TrustedLaunch.consumeListen()
         pendingListen = trustedListen || (launchedFromLauncher && core.ui.value.settings.listenOnOpen)
+        // Read on every create, not just a cold one: an activity restored after the process was
+        // killed is re-created with the notification's intent, and the tap must still open the job.
+        pendingSessionId = announcedSession(intent)
         if (pendingListen) showOverLockScreen()
         if (android.os.Build.VERSION.SDK_INT >= 33 &&
             checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS) !=
@@ -54,6 +60,25 @@ class MainActivity : ComponentActivity() {
                     mode = state.settings.defaultView
                 }
                 LaunchedEffect(mode) { core.setUiMode(mode) }
+
+                // Cold start: let the controller pick its initial session first. Otherwise the
+                // two resumes (last session vs. the notified job) race and either can win.
+                val sessionSettled = state.currentRuntimeId != null ||
+                    state.currentStoredId != null ||
+                    state.error != null
+                LaunchedEffect(pendingSessionId, state.configured, state.link, sessionSettled) {
+                    val jobId = pendingSessionId ?: return@LaunchedEffect
+                    if (!state.configured || state.link !is LinkState.Ready || !sessionSettled) {
+                        return@LaunchedEffect
+                    }
+                    // The tap must land on the job, not on whatever screen happened to be open.
+                    if (state.showSettings) core.closeSettings()
+                    if (state.showActionPermissions) core.closeActionPermissions()
+                    if (state.showOnboarding) core.closeOnboarding()
+                    mode = "chat"
+                    pendingSessionId = null
+                    core.selectSession(jobId)
+                }
 
                 LaunchedEffect(state.link, pendingListen, state.configured) {
                     if (pendingListen && state.configured && state.link is LinkState.Ready) {
@@ -164,6 +189,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
+        announcedSession(intent)?.let { pendingSessionId = it }
         val fromLauncher = intent.action == Intent.ACTION_MAIN &&
             intent.hasCategory(Intent.CATEGORY_LAUNCHER)
         if (TrustedLaunch.consumeListen() ||
@@ -172,6 +198,19 @@ class MainActivity : ComponentActivity() {
             pendingListen = true
             showOverLockScreen()
         }
+    }
+
+    /**
+     * The job session this intent asks to open, or null.
+     *
+     * MainActivity is exported, so the extra is honoured only for a session this app itself
+     * announced in a notification ([JobNotifier]): a crafted intent must not be able to steer
+     * the chat into an arbitrary conversation.
+     */
+    private fun announcedSession(intent: Intent?): String? {
+        val sessionId = intent?.getStringExtra(JobNotifier.EXTRA_SESSION_ID)?.trim().orEmpty()
+        if (sessionId.isEmpty()) return null
+        return sessionId.takeIf { TrustedLaunch.isAnnouncedSession(this, it) }
     }
 
     override fun onRequestPermissionsResult(
