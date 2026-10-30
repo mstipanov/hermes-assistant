@@ -144,9 +144,14 @@ directory, so a beta can never be served as the stable release and stable users 
 ```
 
 The distributor scans `app/build/outputs/apk/beta` and serves it at `hermes-beta.sting.hr`, which is
-also where a beta build's in-app updater looks (`BuildConfig.UPDATE_BASE_URL`). Each published beta
-must raise `versionCode`, otherwise the updater will not offer it. Publish the same APK as a GitHub
-pre-release, with the `CHANGELOG-beta.md` section as the notes.
+also where a beta build's in-app updater looks (`BuildConfig.UPDATE_BASE_URL`). Publish the same APK
+as a GitHub pre-release, with the `CHANGELOG-beta.md` section as the notes.
+
+Versions follow the shared rule (`development` skill): a new version bumps the minor and starts at
+`-beta1` (e.g. `0.55` → next work is `0.56-beta1`), another build of the same version only bumps the
+beta number (`0.55-beta1` → `0.55-beta2`), and the release drops the suffix (`0.55`). `versionCode`
+is a separate counter and must be **+1 for every published build**, betas included, or the updater
+will not offer it.
 
 ## Structure
 
