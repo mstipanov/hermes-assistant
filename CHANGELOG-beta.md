@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta15
+- **The app reports its push token and version.** `device_status` now returns `fcm_token`, `app_version` and `version_code`, so Hermes can see which build the phone runs and send a notification without any extra server endpoint.
+- Removed the dead token-upload path that pointed at a push hostname that does not exist.
+
 ## 0.55-beta14
 - **"Zadaci" stay fresh.** The session list refreshes every 60 seconds while connected, so a job that finished stops showing "radi" and a parked job shows "traži odluku".
 - **The app tells you when a job needs a decision**, and tapping the notification opens that job's session so you can answer it right there.
