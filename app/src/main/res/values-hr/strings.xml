@@ -261,7 +261,7 @@
     <string name="attachment_prompt">Pogledaj priloge i reci mi što vidiš.</string>
     <string name="session_could_not_recover">Sesija se nije mogla obnoviti</string>
     <string name="hermes_reported_error">Hermes je prijavio grešku</string>
-    <string name="no_response_35s">Nema odgovora od Hermesa nakon 35 s. Provjeri vezu ili pošalji ponovno.</string>
+    <string name="turn_timeout">Hermes ne odgovara. Odgovor je možda nepotpun.</string>
     <string name="mobile_unsupported">Mobilna aplikacija ne podržava ovaj upit</string>
     <string name="desktop_only_action">Hermes traži radnju dostupnu samo na desktopu (%1$s).</string>
     <string name="replaced_by_new_action">Zamijenjeno novom akcijom.</string>

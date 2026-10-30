@@ -1489,7 +1489,7 @@ class HermesController(private val app: Application) {
     }
 
     private fun addAssistantPlaceholder() {
-        turnWatchdogJob?.cancel()
+        startTurnWatchdog()
         _ui.update { state ->
             val last = state.messages.lastOrNull()
             if (last?.role == MessageRole.ASSISTANT && last.streaming) return@update state
@@ -1504,7 +1504,6 @@ class HermesController(private val app: Application) {
     }
 
     private fun appendDelta(delta: String) {
-        turnWatchdogJob?.cancel()
         if (delta.isEmpty()) return
         _ui.update { state ->
             val last = state.messages.lastOrNull()
@@ -1569,6 +1568,11 @@ class HermesController(private val app: Application) {
     }
 
     private fun addToolStart(payload: JsonObject) {
+        // A tool call is part of the same turn even when it arrives after an
+        // interim message.complete; re-arm the running state so the orb keeps
+        // breathing while the script runs.
+        turnWatchdogJob?.cancel()
+        startTurnWatchdog()
         val toolId = payload.str("tool_id").ifBlank { UUID.randomUUID().toString() }
         val tool = ChatMessage(
             id = toolId,
@@ -1577,10 +1581,11 @@ class HermesController(private val app: Application) {
             toolContext = payload.strOrNull("context"),
             toolDone = false,
         )
-        _ui.update { it.copy(messages = it.messages + tool) }
+        _ui.update { it.copy(running = true, voiceState = if (it.voiceState == "idle") "thinking" else it.voiceState, messages = it.messages + tool) }
     }
 
     private fun addToolComplete(payload: JsonObject) {
+        startTurnWatchdog()
         val toolId = payload.str("tool_id")
         val result = payload.obj("result")
         val output = result?.strOrNull("output")
@@ -1613,14 +1618,16 @@ class HermesController(private val app: Application) {
     private fun startTurnWatchdog() {
         turnWatchdogJob?.cancel()
         turnWatchdogJob = scope.launch {
-            delay(35_000)
+            // A tool can run for minutes without another event; only a long total
+            // silence means the turn is really gone.
+            delay(TURN_SILENCE_TIMEOUT_MS)
             if (_ui.value.running) {
-                AppLog.add("turn watchdog: no events after 35s")
+                AppLog.add("turn watchdog: no events for ${TURN_SILENCE_TIMEOUT_MS / 1000}s")
                 _ui.update {
                     it.copy(
                         running = false,
                         voiceState = "idle",
-                        error = app.getString(R.string.no_response_35s),
+                        error = app.getString(R.string.turn_timeout),
                     )
                 }
             }
@@ -2389,6 +2396,9 @@ class HermesController(private val app: Application) {
 
         /** Nine backoff waits (1+2+4+8+15×5 ≈ 90 s) before the error is shown. */
         const val MAX_CONNECT_ATTEMPTS = 10
+
+        /** No event at all for this long means the turn is gone (tools may run for minutes). */
+        const val TURN_SILENCE_TIMEOUT_MS = 10 * 60_000L
     }
 
     fun shutdown() {

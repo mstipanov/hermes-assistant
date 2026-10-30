@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta1
+- The orb no longer drops to "Ready" while Hermes is still working: a `tool.start` keeps the turn running, so the orb keeps breathing and the status stays "Thinking…" while scripts and tools execute.
+- The turn timeout no longer fires after 35 s of tool execution; it now waits 10 minutes of total silence and says the answer may be incomplete instead of claiming the turn ended.
+- Interim `message.complete` frames (auto-continue / multi-step turns) re-arm the running state when the next message or tool starts.
+
 ## 0.54-beta1
 - Device actions accept natural aliases: `battery` / `status` / `wifi` / `network` for `device_status`, `torch`/`lamp`, `timer`, `alarm`, `sms`, `call`, `screenshot`, `clipboard`, `notifications`, `ringer`, `dnd`, `media`, `volume`, `contacts`, `map`, `directions`.
 - So "kolika je baterija" now answers with battery level and charging state instead of "the bridge cannot read the battery".
