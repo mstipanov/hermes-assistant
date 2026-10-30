@@ -359,6 +359,7 @@
     <string name="download_failed_reason">Preuzimanje nije uspjelo (razlog %1$d)</string>
     <string name="download_timeout">Preuzimanje traje predugo</string>
     <string name="checksum_mismatch">Kontrolna suma APK-a se ne poklapa — instalacija je zaustavljena.</string>
+    <string name="apk_signature_mismatch">Preuzeti APK nije potpisan istim ključem kao instalirana aplikacija — instalacija je zaustavljena.</string>
 
     <!-- Voice service and notifications -->
     <string name="mic_permission_not_granted">Dozvola za mikrofon nije dana. Postavke → Dozvole → Mikrofon.</string>

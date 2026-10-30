@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta8
+- The APK is about 23% smaller (37.9 MB instead of 49.2 MB): code shrinking (R8) and resource shrinking are now enabled for the release and beta builds, with keep rules for the sherpa-onnx JNI classes.
+- The updater now verifies that the downloaded APK is the same package **signed with the same key** as the installed app before handing it to the installer. The distributor publishes no checksum, so this is the check that actually stops a swapped or re-signed build; a failing APK is deleted and the install is aborted.
+
 ## 0.55-beta7
 - Start–stop mode now transcribes **live while you speak**: partial text streams into the orb like in auto mode, and tapping send only ends the recording and hands the final transcript to Hermes.
 - While a start–stop recording runs, the orb shows a **send arrow** instead of a stop square — it no longer looks like it will discard the sentence.

@@ -358,6 +358,7 @@
     <string name="download_failed_reason">Download failed (reason %1$d)</string>
     <string name="download_timeout">The download is taking too long</string>
     <string name="checksum_mismatch">The APK checksum does not match — installation was stopped.</string>
+    <string name="apk_signature_mismatch">The downloaded APK is not signed with the same key as the installed app — installation was stopped.</string>
 
     <!-- Voice service and notifications -->
     <string name="mic_permission_not_granted">Microphone permission was not granted. Settings → Permissions → Microphone.</string>

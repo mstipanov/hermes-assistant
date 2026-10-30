@@ -21,7 +21,7 @@ android {
         applicationId = "hr.sting.hermes"
         minSdk = 26
         targetSdk = 36
-        versionCode = 61
+        versionCode = 62
         versionName = "0.55"
         // The in-app updater reads <UPDATE_BASE_URL>/version and only installs APKs from that
         // host. The beta build type overrides it so betas update from the beta channel.
@@ -44,7 +44,8 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
@@ -108,3 +109,14 @@ androidComponents {
         }
     }
 }
+
+// AGP's Compose mapping producer asks for org.jetbrains.kotlin:compose-group-mapping:2.2.10,
+// a version that was never published; align it with the Kotlin/Compose compiler used here.
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        if (requested.group == "org.jetbrains.kotlin" && requested.name == "compose-group-mapping") {
+            useVersion("2.4.20")
+        }
+    }
+}
+

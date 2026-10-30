@@ -3,7 +3,11 @@ package hr.sting.hermes.util
 import android.app.DownloadManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageInfo
+import android.content.pm.PackageManager
+import android.content.pm.Signature
 import android.net.Uri
+import android.os.Build
 import android.os.Environment
 import hr.sting.hermes.BuildConfig
 import hr.sting.hermes.R
@@ -12,6 +16,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
 import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
@@ -88,6 +93,7 @@ object Updater {
         val manager = context.getSystemService(DownloadManager::class.java)
             ?: throw IOException(context.getString(R.string.download_manager_unavailable))
         val fileName = "Hermes-${info.versionName}-${System.currentTimeMillis()}.apk"
+        val apkFile = File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), fileName)
         val request = DownloadManager.Request(Uri.parse(info.apkUrl)).apply {
             setTitle(context.getString(R.string.update_download_title, info.versionName))
             setDescription(context.getString(R.string.update_download_description))
@@ -132,6 +138,16 @@ object Updater {
                         } else {
                             AppLog.add("update: server nije poslao SHA-256, preskačem provjeru")
                         }
+                        // The checksum is optional (the distributor does not publish one), so the
+                        // real gate is the signing certificate: a build signed with a different key
+                        // can never be installed over this app, whatever the server claims.
+                        try {
+                            verifySigner(context, apkFile)
+                        } catch (error: Exception) {
+                            runCatching { manager.remove(id) }
+                            runCatching { apkFile.delete() }
+                            throw error
+                        }
                         withContext(Dispatchers.Main.immediate) {
                             launchInstaller(context, uri)
                         }
@@ -168,6 +184,52 @@ object Updater {
         if (!actual.equals(expected, ignoreCase = true)) {
             throw IOException(context.getString(R.string.checksum_mismatch))
         }
+    }
+
+    /**
+     * A downloaded APK may only replace this app if it is the same package signed with the same
+     * key. The distributor publishes no checksum, so this is the gate that actually stops a
+     * swapped or re-signed build from being handed to the installer.
+     */
+    private fun verifySigner(context: Context, apk: File) {
+        if (!apk.isFile || apk.length() == 0L) {
+            throw IOException(context.getString(R.string.downloaded_apk_unavailable))
+        }
+        val pm = context.packageManager
+        @Suppress("DEPRECATION")
+        val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            PackageManager.GET_SIGNING_CERTIFICATES
+        } else {
+            PackageManager.GET_SIGNATURES
+        }
+        val archive = pm.getPackageArchiveInfo(apk.absolutePath, flags)
+            ?: throw IOException(context.getString(R.string.apk_signature_mismatch))
+        val installed = pm.getPackageInfo(context.packageName, flags)
+        val expected = signerDigests(installed)
+        val actual = signerDigests(archive)
+        if (archive.packageName != context.packageName ||
+            expected.isEmpty() ||
+            actual.isEmpty() ||
+            expected != actual
+        ) {
+            throw IOException(context.getString(R.string.apk_signature_mismatch))
+        }
+    }
+
+    private fun signerDigests(info: PackageInfo): Set<String> {
+        val signatures: Array<Signature>? = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            info.signingInfo?.apkContentsSigners
+        } else {
+            @Suppress("DEPRECATION")
+            info.signatures
+        }
+        return signatures.orEmpty()
+            .map { signature ->
+                MessageDigest.getInstance("SHA-256")
+                    .digest(signature.toByteArray())
+                    .joinToString("") { "%02x".format(it) }
+            }
+            .toSet()
     }
 
     private fun launchInstaller(context: Context, uri: Uri) {
