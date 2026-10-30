@@ -66,6 +66,7 @@ import androidx.compose.material3.rememberDrawerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -414,10 +415,24 @@ fun ChatScreen(
 @Composable
 private fun MessageList(messages: List<ChatMessage>, onFileRetry: (String) -> Unit) {
     val listState = rememberLazyListState()
+    // Pinned means the newest message is on screen: only then does growing content follow the
+    // bottom. Scrolling up to read history un-pins the list and suspends auto-scrolling.
+    val pinned by remember(listState) {
+        derivedStateOf { !listState.canScrollForward }
+    }
     val lastLength = messages.lastOrNull()?.text?.length ?: 0
-    LaunchedEffect(messages.size, lastLength) {
+    // The first message id changes only when the shown session changes, so this is the first
+    // load of a session: jump to the newest message once instead of animating the whole history.
+    val sessionKey = messages.firstOrNull()?.id.orEmpty()
+    LaunchedEffect(sessionKey) {
         if (messages.isNotEmpty()) {
-            listState.animateScrollToItem(messages.lastIndex)
+            listState.scrollToItem(messages.lastIndex)
+        }
+    }
+    // Streaming updates follow the bottom instantly, but never yank a user who scrolled up.
+    LaunchedEffect(messages.size, lastLength) {
+        if (pinned && messages.isNotEmpty()) {
+            listState.scrollToItem(messages.lastIndex)
         }
     }
     LazyColumn(

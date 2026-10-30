@@ -131,6 +131,10 @@ class HermesController(private val app: Application) {
     private var sessionsLoaded = false
     private var wasReady = false
     private var sessionsRefreshJob: Job? = null
+    /** In-flight [selectSession] switch; starting a new one cancels the old round-trip. */
+    private var switchJob: Job? = null
+    /** Bumped by every switch so a resume that lands late cannot apply stale session state. */
+    private var switchGeneration = 0
     private var voiceJob: Job? = null
     private var ttsStarted = false
     private var turnWatchdogJob: Job? = null
@@ -544,7 +548,18 @@ class HermesController(private val app: Application) {
         createSession()
     }
 
-    private suspend fun resumeSession(storedId: String, keepOnFailure: Boolean = true): Boolean {
+    /**
+     * Resume a session by its durable stored id.
+     *
+     * [generation] stamps a switch started by [selectSession]: when a newer switch has bumped
+     * [switchGeneration], the result of this round-trip is dropped instead of overwriting the
+     * session the user is actually looking at.
+     */
+    private suspend fun resumeSession(
+        storedId: String,
+        keepOnFailure: Boolean = true,
+        generation: Int? = null,
+    ): Boolean {
         val client = rpc ?: return false
         AppLog.add("resume $storedId")
         val result = runCatching {
@@ -558,23 +573,38 @@ class HermesController(private val app: Application) {
                 ),
             )
         }
-        return result.fold(
-            onSuccess = {
+        var applied = false
+        result.fold(
+            onSuccess = { fresh ->
+                if (isStaleSwitch(generation)) {
+                    AppLog.add("resume $storedId ignored: superseded by a newer switch")
+                    return@fold
+                }
                 val row = _ui.value.sessions.firstOrNull { item -> item.id == storedId }
-                applySession(it, fallbackStoredId = storedId, fallbackTitle = row?.title)
-                true
+                applySession(fresh, fallbackStoredId = storedId, fallbackTitle = row?.title)
+                applied = true
             },
             onFailure = { error ->
+                // runCatching also catches cancellation; a newer switch cancelling this one
+                // must not surface as a resume failure.
+                if (error is CancellationException) throw error
+                if (isStaleSwitch(generation)) {
+                    AppLog.add("resume $storedId dropped: superseded by a newer switch")
+                    return@fold
+                }
                 AppLog.add("resume failed: ${humanError(error)}")
                 if (!keepOnFailure) {
                     settingsStore.update { it.copy(lastSessionId = null) }
                 } else {
                     _ui.update { it.copy(error = humanError(error)) }
                 }
-                false
             },
         )
+        return applied
     }
+
+    private fun isStaleSwitch(generation: Int?): Boolean =
+        generation != null && generation != switchGeneration
 
     private suspend fun createSession() {
         val client = rpc ?: return
@@ -634,6 +664,9 @@ class HermesController(private val app: Application) {
     fun newChat() {
         awaitingAutoListen = false
         autoListenJob?.cancel()
+        // Leaving for a fresh session also invalidates a switch still in flight.
+        switchJob?.cancel()
+        switchGeneration++
         // Abandoning the conversation must also stop the server turn; otherwise it
         // keeps running (and spending tokens) in a session nobody is looking at.
         if (_ui.value.running) interrupt()
@@ -659,11 +692,27 @@ class HermesController(private val app: Application) {
     fun selectSession(storedId: String) {
         awaitingAutoListen = false
         autoListenJob?.cancel()
+        // Leaving the conversation must also stop the server turn (see newChat()); otherwise
+        // the abandoned turn keeps running and spending tokens in a session nobody watches.
+        if (_ui.value.running) interrupt()
         stopVoice()
         stopTts()
-        scope.launch {
-            _ui.update { it.copy(error = null, messages = emptyList(), running = false) }
-            resumeSession(storedId)
+        // A newer tap wins: cancel the previous round-trip and invalidate its result.
+        switchJob?.cancel()
+        val generation = ++switchGeneration
+        // Drop the old ids BEFORE the round-trip, so nothing sent while the resume is in
+        // flight can be submitted to the session being left behind.
+        _ui.update {
+            it.copy(
+                currentRuntimeId = null,
+                currentStoredId = null,
+                error = null,
+                messages = emptyList(),
+                running = false,
+            )
+        }
+        switchJob = scope.launch {
+            resumeSession(storedId, generation = generation)
         }
     }
 
@@ -1414,7 +1463,11 @@ class HermesController(private val app: Application) {
 
     private fun handleEvent(event: GatewayEvent) {
         val state = _ui.value
-        if (event.sessionId != null && state.currentRuntimeId != null &&
+        // While a switch is in flight the visible session is unknown (selectSession clears the
+        // runtime id first). Events then belong to the session being left — or to the target,
+        // whose state the resume replays — so they must not be painted into the cleared view.
+        val switching = switchJob?.isActive == true
+        if (event.sessionId != null && (switching || state.currentRuntimeId != null) &&
             event.sessionId != state.currentRuntimeId
         ) {
             if (event.type == "sessions.changed") scheduleSessionsRefresh()
