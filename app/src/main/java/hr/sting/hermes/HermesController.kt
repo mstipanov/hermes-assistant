@@ -673,7 +673,7 @@ class HermesController(private val app: Application) {
         // Leaving for a fresh session also invalidates a switch still in flight.
         switchJob?.cancel()
         switchGeneration++
-        // The queue belongs to the conversation being left: it must never land in the new one.
+        // Queued text belongs to the conversation it was typed in and must never be posted into a different one.
         _ui.update { it.copy(queued = emptyList()) }
         // Abandoning the conversation must also stop the server turn; otherwise it
         // keeps running (and spending tokens) in a session nobody is looking at.
@@ -700,7 +700,7 @@ class HermesController(private val app: Application) {
     fun selectSession(storedId: String) {
         awaitingAutoListen = false
         autoListenJob?.cancel()
-        // The queue belongs to the conversation being left: it must never land in the new one.
+        // Queued text belongs to the conversation it was typed in and must never be posted into a different one.
         _ui.update { it.copy(queued = emptyList()) }
         // Leaving the conversation must also stop the server turn (see newChat()); otherwise
         // the abandoned turn keeps running and spending tokens in a session nobody watches.
