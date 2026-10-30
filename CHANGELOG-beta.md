@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta2
+- New-session button on the main voice screen (the "+" next to chat and settings), so a fresh conversation can be started without digging through the drawer.
+- Starting a new session while Hermes is answering now stops that turn first instead of leaving it running in the background.
+
 ## 0.55-beta1
 - The orb no longer drops to "Ready" while Hermes is still working: a `tool.start` keeps the turn running, so the orb keeps breathing and the status stays "Thinking…" while scripts and tools execute.
 - The turn timeout no longer fires after 35 s of tool execution; it now waits 10 minutes of total silence and says the answer may be incomplete instead of claiming the turn ended.

@@ -150,6 +150,7 @@ class MainActivity : ComponentActivity() {
                         onConnect = core::connect,
                         onFinishVoice = core::finishVoice,
                         onMicModeChange = core::setMicMode,
+                        onNewSession = core::newChat,
                         onApprove = core::approve,
                         onConfirmDeviceAction = core::confirmDeviceAction,
                         onClearMessage = core::clearError,

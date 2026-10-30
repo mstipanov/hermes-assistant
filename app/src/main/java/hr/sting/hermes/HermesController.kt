@@ -740,6 +740,9 @@ class HermesController(private val app: Application) {
     fun newChat() {
         awaitingAutoListen = false
         autoListenJob?.cancel()
+        // Abandoning the conversation must also stop the server turn; otherwise it
+        // keeps running (and spending tokens) in a session nobody is looking at.
+        if (_ui.value.running) interrupt()
         stopVoice()
         stopTts()
         scope.launch {
