@@ -46,7 +46,11 @@ class LiveStt(private val rest: HermesRest) {
     /** Signals end-of-speech and waits for the server's final transcript. */
     suspend fun finish(): String? {
         val ws = socket ?: return null
-        if (!sentAudio) return null
+        if (!sentAudio) {
+            socket = null
+            runCatching { ws.close(1000, "no audio") }
+            return null
+        }
         if (ws.send("""{"eos":true}""")) {
             val text = withTimeoutOrNull(30_000) { finalText.await() }
             runCatching { ws.close(1000, "done") }
@@ -54,6 +58,7 @@ class LiveStt(private val rest: HermesRest) {
             return text
         }
         socket = null
+        runCatching { ws.close(1000, "eos not sent") }
         return null
     }
 

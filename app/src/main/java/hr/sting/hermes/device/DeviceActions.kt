@@ -1133,9 +1133,16 @@ object DeviceActions {
                 Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS,
             )
         }
-        val requested = params.bool("on", params.bool("enabled")) ||
-            params.str("state").lowercase() in setOf("on", "true", "enable", "priority")
+        val hasOn = params.containsKey("on") || params.containsKey("enabled")
+        val state = params.str("state").lowercase()
         val mode = params.str("mode").lowercase()
+        // A truncated request used to fall through to INTERRUPTION_FILTER_ALL and silently turn
+        // Do Not Disturb OFF. Refuse instead of guessing.
+        if (!hasOn && state.isBlank() && mode.isBlank()) {
+            return errorResult(context.getString(R.string.dnd_needs_state))
+        }
+        val requested = params.bool("on", params.bool("enabled")) ||
+            state in setOf("on", "true", "enable", "priority")
         val filter = when {
             mode == "alarms" -> android.app.NotificationManager.INTERRUPTION_FILTER_ALARMS
             mode == "none" || mode == "total" -> android.app.NotificationManager.INTERRUPTION_FILTER_NONE

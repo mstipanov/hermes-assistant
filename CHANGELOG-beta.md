@@ -3,6 +3,16 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta9
+- **Stop works at once.** The stop button clears the turn in the UI immediately (no more "still answering" spinner that never ends) and sends the interrupt with a short timeout instead of waiting on a 35 s Ready handshake.
+- **Screen capture works on Android 14+.** The media projection now registers its required callback; without it every capture failed with "Must register a callback before starting capture".
+- **Fewer crashes in the wake-word service.** Stopping the service while the detector is mid-frame no longer frees native memory still in use, and a microphone error can no longer kill the process and leave the wake loop dead.
+- **Speech never outlives a cancelled turn.** A text-to-speech request that finishes after stop/barge-in is dropped instead of played, and the two fallback paths can no longer speak the same reply twice.
+- **No reconnect storm** after the server closes the socket cleanly: reconnects now back off (with jitter) instead of re-authenticating in a tight loop.
+- **"Do Not Disturb" refuses an empty request** instead of silently turning DND off.
+- Settings: the keyboard no longer covers the connection fields, and each page opens scrolled to the top.
+- Two last untranslated strings (tool fallback, "Wake word model") are now localized.
+
 ## 0.55-beta8
 - The APK is about 23% smaller (37.9 MB instead of 49.2 MB): code shrinking (R8) and resource shrinking are now enabled for the release and beta builds, with keep rules for the sherpa-onnx JNI classes.
 - The updater now verifies that the downloaded APK is the same package **signed with the same key** as the installed app before handing it to the installer. The distributor publishes no checksum, so this is the check that actually stops a swapped or re-signed build; a failing APK is deleted and the install is aborted.

@@ -199,6 +199,12 @@ class HermesRpc(
                 call("client.capabilities", jsonObject("server_requests" to true))
                 startHeartbeat()
                 closed.await()
+                // A clean close (server restart, another client, ticket reuse) is not a success:
+                // without a wait here the loop re-authenticates as fast as the network allows.
+                if (stopped) break
+                AppLog.add("ws closed by server")
+                delay(jittered(backoff))
+                backoff = (backoff * 2).coerceAtMost(15_000L)
             } catch (cancelled: kotlinx.coroutines.CancellationException) {
                 throw cancelled
             } catch (error: Exception) {
@@ -207,7 +213,7 @@ class HermesRpc(
                 _state.value = LinkState.Failed(
                     error.message ?: appContext.getString(R.string.rpc_connection_failed),
                 )
-                delay(backoff)
+                delay(jittered(backoff))
                 backoff = (backoff * 2).coerceAtMost(15_000L)
             } finally {
                 heartbeatJob?.cancel()
@@ -228,6 +234,12 @@ class HermesRpc(
                 socket?.send("""{"jsonrpc":"2.0","id":0,"method":"ping","params":{}}""")
             }
         }
+    }
+
+    /** Spread reconnects so several clients of one server do not retry in lockstep. */
+    private fun jittered(ms: Long): Long {
+        val spread = (ms / 5).coerceAtLeast(1L)
+        return (ms + kotlin.random.Random.nextLong(-spread, spread + 1)).coerceAtLeast(250L)
     }
 
     private fun failAllPending(reason: String) {

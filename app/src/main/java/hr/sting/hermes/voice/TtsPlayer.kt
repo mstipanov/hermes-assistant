@@ -327,8 +327,14 @@ class TtsPlayer(private val context: Context) {
         focusRequest = null
     }
 
+    @Volatile
+    private var fallbackActive = false
+
     private fun fallback() {
         startupFallbackJob?.cancel()
+        // The 5 s startup fallback and an onFailure can both land here; two players would then
+        // speak the same reply at once and the first one leaked.
+        if (fallbackActive) return
         runCatching { socket?.close(1000, "fallback") }
         socket = null
         open = false
@@ -340,12 +346,24 @@ class TtsPlayer(private val context: Context) {
             setSpeaking(false)
             return
         }
+        fallbackActive = true
         coroutineScope.launch(Dispatchers.IO) {
             try {
                 val bytes = client.speak(text)
+                // stopTts()/barge-in may have run while the request was in flight.
+                if (stopped) {
+                    setSpeaking(false)
+                    return@launch
+                }
                 val file = File.createTempFile("hermes-tts-", ".mp3", context.cacheDir)
                 file.writeBytes(bytes)
+                if (stopped) {
+                    file.delete()
+                    setSpeaking(false)
+                    return@launch
+                }
                 val player = MediaPlayer()
+                fallbackPlayer?.release()
                 fallbackPlayer = player
                 player.setDataSource(file.absolutePath)
                 player.setOnCompletionListener {
@@ -356,12 +374,21 @@ class TtsPlayer(private val context: Context) {
                     setSpeaking(false)
                 }
                 player.prepare()
+                if (stopped) {
+                    player.release()
+                    file.delete()
+                    if (fallbackPlayer === player) fallbackPlayer = null
+                    setSpeaking(false)
+                    return@launch
+                }
                 player.start()
                 setSpeaking(true)
             } catch (error: Exception) {
                 AppLog.add("tts fallback failed: ${error.message ?: error.javaClass.simpleName}")
                 VoiceDiagnostics.update { it.copy(lastTts = "failed: ${error.message}") }
                 setSpeaking(false)
+            } finally {
+                fallbackActive = false
             }
         }
     }

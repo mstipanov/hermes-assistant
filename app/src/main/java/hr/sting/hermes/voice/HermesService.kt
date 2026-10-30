@@ -35,6 +35,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 
 /**
  * Always-on wake word service. It owns only the KWS microphone; after a
@@ -105,6 +107,9 @@ class HermesService : Service() {
         running = false
         stopWakeLoop()
         observerJob?.cancel()
+        // The KWS loop may be inside the native accept() call, which is not cancellation-aware:
+        // join it before releasing the detector or sherpa frees memory still in use (SIGSEGV).
+        runCatching { runBlocking { withTimeoutOrNull(2_000) { audioJob?.join() } } }
         scope.cancel()
         detector?.release()
         detector = null
@@ -147,12 +152,18 @@ class HermesService : Service() {
                     continue
                 }
                 activeRecord = record
-                record.startRecording()
                 val buffer = ShortArray(1_600)
                 try {
+                    // Inside the try: a SecurityException/IllegalStateException here used to escape
+                    // the launch and kill the process, and the wake loop never came back.
+                    record.startRecording()
                     while (isActive && core.ui.value.voiceState == "idle") {
                         val read = record.read(buffer, 0, buffer.size)
-                        if (read <= 0) continue
+                        if (read < 0) {
+                            // AudioRecord error (dead object): reopen the recorder instead of spinning.
+                            break
+                        }
+                        if (read == 0) continue
                         val keyword = localDetector.accept(buffer, read)
                         if (keyword != null) {
                             record.stop()

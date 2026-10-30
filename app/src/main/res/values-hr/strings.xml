@@ -195,7 +195,8 @@
     <string name="service">Servis</string>
     <string name="not_running">ne radi</string>
     <string name="running">radi</string>
-    <string name="wake_word_model">Wake word model</string>
+    <string name="wake_word_model">Model budne riječi</string>
+    <string name="tool_fallback">Alat</string>
     <string name="loaded">učitan</string>
     <string name="not_loaded">nije učitan</string>
     <string name="microphone">Mikrofon</string>
@@ -539,6 +540,7 @@
     <string name="location_unknown">Još nema lokacije — pokušaj za koji trenutak.</string>
     <string name="dnd_access_needed">Pristup za Ne uznemiravaj nije odobren.</string>
     <string name="dnd_unavailable">Ne uznemiravaj nije dostupno.</string>
+    <string name="dnd_needs_state">Trebam znati treba li uključiti ili isključiti "Ne uznemiravaj".</string>
     <string name="unknown_ringer_mode">Nepoznat način zvona: %1$s.</string>
     <string name="write_settings_needed">Nije odobrena dozvola za mijenjanje sistemskih postavki.</string>
     <string name="invalid_brightness">Svjetlina mora biti 0–100.</string>

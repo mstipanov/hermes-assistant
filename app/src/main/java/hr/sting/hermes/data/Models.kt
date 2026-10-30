@@ -192,7 +192,7 @@ fun JsonObject.toChatMessage(): ChatMessage? {
         val content = this["content"]?.toString()?.takeIf { it != "null" && it.isNotBlank() }
         return ChatMessage(
             role = MessageRole.TOOL,
-            toolName = strOrNull("name") ?: "alat",
+            toolName = strOrNull("name"),
             toolContext = strOrNull("context"),
             toolResult = content,
             toolDone = true,

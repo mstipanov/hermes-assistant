@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -52,6 +53,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -111,6 +113,9 @@ fun SettingsScreen(
 ) {
     val settings = state.settings
     var page by rememberSaveable { mutableStateOf(SettingsPage.HOME) }
+    // One scroll state per page: sharing it left the next page already scrolled.
+    val pageScroll = rememberScrollState()
+    LaunchedEffect(page) { pageScroll.scrollTo(0) }
     var draft by remember(settings) { mutableStateOf(settings) }
     var showSecret by remember { mutableStateOf(false) }
     var showApiToken by remember { mutableStateOf(false) }
@@ -191,7 +196,10 @@ fun SettingsScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
+                // Without imePadding the Save/Test controls of the CONNECTION page sit behind
+                // the keyboard on an edge-to-edge window.
+                .imePadding()
+                .verticalScroll(pageScroll)
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {

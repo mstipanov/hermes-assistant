@@ -20,6 +20,7 @@ import android.os.Build
 import android.os.Handler
 import android.os.HandlerThread
 import android.os.IBinder
+import android.os.Looper
 import android.provider.MediaStore
 import hr.sting.hermes.R
 import hr.sting.hermes.data.jsonObject
@@ -56,6 +57,16 @@ class ScreenCaptureService : Service() {
         }
         try {
             projection = manager.getMediaProjection(resultCode, data)
+            // Android 14+ throws "Must register a callback before starting capture" without this.
+            projection?.registerCallback(object : MediaProjection.Callback() {
+                override fun onStop() {
+                    if (ScreenCapture.active() != null) {
+                        fail(getString(R.string.screen_capture_unavailable))
+                    }
+                    cleanup()
+                    stopSelf()
+                }
+            }, Handler(Looper.getMainLooper()))
             captureOneFrame()
         } catch (error: Exception) {
             fail(error.message ?: error.javaClass.simpleName)

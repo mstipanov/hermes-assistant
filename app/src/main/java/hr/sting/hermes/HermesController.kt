@@ -1379,13 +1379,27 @@ class HermesController(private val app: Application) {
         turnWatchdogJob?.cancel()
         stopVoice()
         stopTts()
+        // Stop has to be visible at once: the RPC below can wait up to 35 s for Ready, and the
+        // old order left the app "still answering" (with a spinning placeholder) the whole time.
+        _ui.update { state ->
+            state.copy(
+                running = false,
+                voiceState = "idle",
+                messages = state.messages.map { message ->
+                    if (message.role == MessageRole.ASSISTANT && message.streaming) {
+                        message.copy(streaming = false)
+                    } else {
+                        message
+                    }
+                },
+            )
+        }
         val client = rpc ?: return
         val sid = _ui.value.currentRuntimeId ?: return
         scope.launch {
             runCatching {
-                client.call("session.interrupt", jsonObject("session_id" to sid))
+                client.call("session.interrupt", jsonObject("session_id" to sid), timeoutMs = 10_000)
             }
-            _ui.update { it.copy(running = false, voiceState = "idle") }
         }
     }
 

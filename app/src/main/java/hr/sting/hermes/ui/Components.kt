@@ -388,7 +388,7 @@ private fun ToolCard(message: ChatMessage) {
                 }
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = message.toolName ?: "alat",
+                    text = message.toolName ?: stringResource(R.string.tool_fallback),
                     style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.weight(1f),

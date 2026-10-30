@@ -195,6 +195,7 @@
     <string name="not_running">not running</string>
     <string name="running">running</string>
     <string name="wake_word_model">Wake word model</string>
+    <string name="tool_fallback">Tool</string>
     <string name="loaded">loaded</string>
     <string name="not_loaded">not loaded</string>
     <string name="microphone">Microphone</string>
@@ -538,6 +539,7 @@
     <string name="location_unknown">No location fix yet — try again in a moment.</string>
     <string name="dnd_access_needed">Do Not Disturb access is not granted.</string>
     <string name="dnd_unavailable">Do Not Disturb is not available.</string>
+    <string name="dnd_needs_state">I need to know whether to turn Do Not Disturb on or off.</string>
     <string name="unknown_ringer_mode">Unknown ringer mode: %1$s.</string>
     <string name="write_settings_needed">Permission to change system settings is not granted.</string>
     <string name="invalid_brightness">Brightness must be 0–100.</string>

@@ -71,11 +71,19 @@ class AudioRecorder(private val context: Context) {
         var noiseSum = 0.0
         var noiseFrames = 0
         var threshold = 0.012
+        var emptyReads = 0
         try {
             record.startRecording()
             while (isActive && !cancelled && !stopRequested) {
                 val read = record.read(buffer, 0, buffer.size)
-                if (read <= 0) continue
+                // A negative read is an AudioRecord error (dead object, invalid operation);
+                // retrying it spins the CPU at 100% and still uploads a truncated recording.
+                if (read < 0) break
+                if (read == 0) {
+                    if (++emptyReads > 200) break
+                    continue
+                }
+                emptyReads = 0
                 val bytes = ByteArray(read * 2)
                 ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(buffer, 0, read)
                 output.write(bytes)
@@ -157,7 +165,8 @@ class AudioRecorder(private val context: Context) {
             record.startRecording()
             while (isActive && !cancelled && System.currentTimeMillis() - start < durationMs) {
                 val read = record.read(buffer, 0, buffer.size)
-                if (read <= 0) continue
+                if (read < 0) break
+                if (read == 0) continue
                 val bytes = ByteArray(read * 2)
                 ByteBuffer.wrap(bytes).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer().put(buffer, 0, read)
                 output.write(bytes)
