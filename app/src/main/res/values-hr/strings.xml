@@ -531,6 +531,9 @@
     <string name="empty_file">Datoteka je prazna.</string>
     <string name="file_not_saved">Datoteku nije moguće spremiti.</string>
     <string name="file_not_found">Datoteka nije nađena: %1$s.</string>
+    <string name="file_too_large_save">Datoteka nije spremljena: veličina %1$d B prelazi ograničenje od 8 MB za save_file.</string>
+    <string name="file_mime_not_allowed">Datoteka nije spremljena: MIME tip \"%1$s\" nije dopušten. save_file prihvaća slike, tekst, PDF, audio, video, zip i uredske dokumente.</string>
+    <string name="open_file_blocked_type">Odbijeno otvaranje \"%1$s\": tip \"%2$s\" može instalirati ili pokrenuti kod. Otvori ga sam iz Downloads ako mu vjeruješ.</string>
     <string name="pick_file_manual">Odabir datoteke traži file picker.</string>
     <string name="pick_file_manual_hint">Priloži datoteku u chatu — Hermes je tamo prima.</string>
     <string name="close_app_message">Android ne dopušta zatvaranje drugih aplikacija; Hermes je otišao na početni ekran.</string>

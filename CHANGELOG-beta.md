@@ -3,6 +3,11 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta12
+- **Files need confirmation.** `save_file` and `open_file` now ask before they run, refuse payloads over 8 MB, only accept a non-executable MIME allowlist (images, text, PDF, audio, video, archives, office documents) and never hand an APK or another executable to a viewer.
+- **The audio-only screen no longer recomposes every frame.** The orb's pulse is read in the draw phase and only runs while listening or speaking, so an idle screen schedules no frames at all (it used to re-sanitise the last reply and rebuild two gradients 60 times a second).
+- **Screen capture can no longer get stuck on "busy"**: if the consent dialog goes away without an answer, the pending request is failed instead of blocking every later capture until the app restarts.
+
 ## 0.55-beta11
 - **Switching sessions stops the turn you are leaving.** The abandoned turn no longer keeps running (and spending) on the server, a message typed during the switch can no longer land in the previous session, and two quick taps no longer race — the newest switch wins.
 - **The watchdog measures silence, not total time.** A turn that streams for ten minutes, or that waits on an approval, is no longer declared dead halfway through; if the watchdog does fire, it also stops the server turn so the next message is not rejected with "active turn lease".

@@ -530,6 +530,9 @@
     <string name="empty_file">The file is empty.</string>
     <string name="file_not_saved">The file could not be saved.</string>
     <string name="file_not_found">File not found: %1$s.</string>
+    <string name="file_too_large_save">File not saved: %1$d bytes is over the 8 MB limit for save_file.</string>
+    <string name="file_mime_not_allowed">File not saved: MIME type \"%1$s\" is not allowed. save_file accepts images, text, PDF, audio, video, zip and office documents.</string>
+    <string name="open_file_blocked_type">Refused to open \"%1$s\": type \"%2$s\" can install or run code. Open it yourself from Downloads if you trust it.</string>
     <string name="pick_file_manual">Picking a file needs the file picker.</string>
     <string name="pick_file_manual_hint">Attach the file in the chat — Hermes receives it there.</string>
     <string name="close_app_message">Android does not allow closing other apps; Hermes went to the home screen.</string>

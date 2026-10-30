@@ -50,12 +50,14 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.State
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -97,16 +99,10 @@ fun AudioOnlyScreen(
     val active = voiceState != "idle" || state.running
     val landscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
     val manualMode = state.settings.micMode == "manual"
-    val infinite = rememberInfiniteTransition(label = "orb")
-    val pulse by infinite.animateFloat(
-        initialValue = 0.94f,
-        targetValue = 1.07f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(if (voiceState == "speaking") 520 else 1100),
-            repeatMode = RepeatMode.Reverse,
-        ),
-        label = "pulse",
-    )
+    // Held as a State and deliberately not read here: Orb reads it in its draw phase, so an
+    // animation frame invalidates only the orb's layer instead of recomposing this screen
+    // (which used to re-sanitise the last reply and rebuild both gradients on every frame).
+    val pulse = rememberOrbPulse(active = active, voiceState = voiceState)
     val lastReply = state.messages.lastOrNull {
         it.role == MessageRole.ASSISTANT && it.text.isNotBlank()
     }
@@ -279,6 +275,29 @@ fun AudioOnlyScreen(
     }
 }
 
+/**
+ * The orb's breathing pulse, as a [State] so callers never read it themselves.
+ *
+ * The animation is composed only while [active], so an idle screen schedules no frames at all
+ * (and the constant 1f keeps the orb at its resting size). While listening or speaking the
+ * values, durations and reverse mode are the same as before.
+ */
+@Composable
+private fun rememberOrbPulse(active: Boolean, voiceState: String): State<Float> =
+    if (!active) {
+        remember { mutableFloatStateOf(1f) }
+    } else {
+        rememberInfiniteTransition(label = "orb").animateFloat(
+            initialValue = 0.94f,
+            targetValue = 1.07f,
+            animationSpec = infiniteRepeatable(
+                animation = tween(if (voiceState == "speaking") 520 else 1100),
+                repeatMode = RepeatMode.Reverse,
+            ),
+            label = "pulse",
+        )
+    }
+
 @Composable
 private fun ScreenHeader(
     state: HermesUiState,
@@ -335,7 +354,7 @@ private fun ScreenHeader(
 @Composable
 private fun Orb(
     active: Boolean,
-    pulse: Float,
+    pulse: State<Float>,
     voiceState: String,
     running: Boolean,
     manual: Boolean,
@@ -345,7 +364,13 @@ private fun Orb(
     Box(
         modifier = Modifier
             .size(size)
-            .scale(if (active) pulse else 1f)
+            // Read in the draw phase: a pulse frame re-runs only this layer block, so the
+            // screen above never recomposes while the orb breathes.
+            .graphicsLayer {
+                val scale = if (active) pulse.value else 1f
+                scaleX = scale
+                scaleY = scale
+            }
             .background(
                 Brush.radialGradient(
                     listOf(

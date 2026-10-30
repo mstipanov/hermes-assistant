@@ -42,16 +42,35 @@ object ScreenCapture {
         pending?.complete(result)
         pending = null
     }
+
+    /**
+     * Answers [request] with [result] only while it is still the pending one. The consent
+     * activity calls this from onDestroy, so a request the user walked away from gets an
+     * answer while a request the capture service owns (or a newer one) is left untouched.
+     */
+    fun completeIfPending(request: CompletableDeferred<JsonObject>?, result: JsonObject) {
+        if (request == null || pending !== request) return
+        pending = null
+        request.complete(result)
+    }
 }
 
 /** Transparent trampoline: asks for the projection consent and starts the service. */
 class ScreenCaptureActivity : Activity() {
+    /** Request this instance was opened for; null when nothing was pending. */
+    private var capture: CompletableDeferred<JsonObject>? = null
+
+    /** Set once the capture service owns the answer — onDestroy must then leave it alone. */
+    private var handedOff = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        if (ScreenCapture.active() == null) {
+        val request = ScreenCapture.active()
+        if (request == null) {
             finish()
             return
         }
+        capture = request
         val manager = getSystemService(MediaProjectionManager::class.java)
         if (manager == null) {
             ScreenCapture.complete(jsonObject("ok" to false, "error" to getString(R.string.screen_capture_unavailable)))
@@ -73,6 +92,8 @@ class ScreenCaptureActivity : Activity() {
             finish()
             return
         }
+        // From here the service answers the request, so onDestroy must not cancel it.
+        handedOff = true
         runCatching {
             ContextCompat.startForegroundService(
                 this,
@@ -87,6 +108,23 @@ class ScreenCaptureActivity : Activity() {
             )
         }
         finish()
+    }
+
+    /**
+     * The system, or Home while the consent dialog is up, can destroy this activity without
+     * ever delivering onActivityResult. Answer the request here instead: a pending request
+     * that can no longer be answered makes every later screen_capture answer "busy" until
+     * the process dies.
+     */
+    override fun onDestroy() {
+        // A config change recreates this activity and the new instance continues the request.
+        if (!handedOff && !isChangingConfigurations) {
+            ScreenCapture.completeIfPending(
+                capture,
+                jsonObject("ok" to false, "error" to getString(R.string.screen_capture_denied)),
+            )
+        }
+        super.onDestroy()
     }
 
     private companion object {

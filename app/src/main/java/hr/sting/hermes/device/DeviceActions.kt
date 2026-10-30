@@ -739,6 +739,58 @@ object DeviceActions {
 
     // ── Files ─────────────────────────────────────────────────────────────
 
+    /** Hard cap on a single `save_file` payload: phone storage, public folder, untrusted bytes. */
+    private const val MAX_SAVED_FILE_BYTES = 8 * 1024 * 1024
+
+    /**
+     * MIME families `save_file` is allowed to write. Everything else — package archives,
+     * executables, opaque `application/octet-stream` — is refused, because the bytes land in a
+     * public folder and [openFile] can hand them to a viewer/installer afterwards.
+     */
+    private val SAVED_FILE_MIME_PREFIXES = listOf(
+        "image/",
+        "text/",
+        "audio/",
+        "video/",
+        "application/vnd.openxmlformats-officedocument.",
+        "application/vnd.oasis.opendocument.",
+    )
+
+    private val SAVED_FILE_MIME_TYPES = setOf(
+        "application/pdf",
+        "application/json",
+        "application/rtf",
+        "application/msword",
+        "application/vnd.ms-excel",
+        "application/vnd.ms-powerpoint",
+        "application/zip",
+        "application/x-zip-compressed",
+        "application/gzip",
+        "application/x-tar",
+        "application/x-7z-compressed",
+        "application/x-rar-compressed",
+    )
+
+    /** Types that install or execute code; [openFile] refuses to launch them. */
+    private val BLOCKED_OPEN_MIME_TYPES = setOf(
+        "application/vnd.android.package-archive",
+        "application/octet-stream",
+        "application/vnd.microsoft.portable-executable",
+        "application/x-msdownload",
+        "application/x-msi",
+        "application/x-elf",
+        "application/x-mach-binary",
+        "application/x-sharedlib",
+        "application/x-sh",
+        "application/x-shellscript",
+    )
+
+    /** Same rule for downloads MediaStore has no type for (getType returns null). */
+    private val BLOCKED_OPEN_EXTENSIONS = setOf(
+        "apk", "apks", "xapk", "aab", "exe", "msi", "msix", "appx", "dmg", "pkg",
+        "deb", "rpm", "bat", "cmd", "sh", "so", "elf",
+    )
+
     private fun saveFile(context: Context, params: JsonObject): JsonObject {
         val name = params.str("name").trim().ifBlank { "hermes-${System.currentTimeMillis()}.txt" }
         val safeName = name.replace(Regex("[^A-Za-z0-9._-]"), "_").take(120)
@@ -749,15 +801,12 @@ object DeviceActions {
             content.toByteArray(Charsets.UTF_8)
         }
         if (bytes.isEmpty()) return errorResult(context.getString(R.string.empty_file))
-        val mime = params.str("mime").ifBlank {
-            when (safeName.substringAfterLast('.', "").lowercase()) {
-                "txt", "md", "log", "csv" -> "text/plain"
-                "json" -> "application/json"
-                "pdf" -> "application/pdf"
-                "png" -> "image/png"
-                "jpg", "jpeg" -> "image/jpeg"
-                else -> "application/octet-stream"
-            }
+        if (bytes.size > MAX_SAVED_FILE_BYTES) {
+            return errorResult(context.getString(R.string.file_too_large_save, bytes.size))
+        }
+        val mime = baseMime(params.str("mime").ifBlank { defaultMimeFor(safeName) })
+        if (!isAllowedSaveMime(mime)) {
+            return errorResult(context.getString(R.string.file_mime_not_allowed, mime))
         }
         val uri = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val values = android.content.ContentValues().apply {
@@ -799,12 +848,48 @@ object DeviceActions {
         val uri = findDownload(context, name)
             ?: return errorResult(context.getString(R.string.file_not_found, path))
         val mime = context.contentResolver.getType(uri) ?: "*/*"
+        if (isBlockedOpenType(mime, name)) {
+            return errorResult(context.getString(R.string.open_file_blocked_type, name, mime))
+        }
         context.startActivity(
             Intent(Intent.ACTION_VIEW, uri)
                 .setDataAndType(uri, mime)
                 .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_ACTIVITY_NEW_TASK),
         )
         return jsonObject("ok" to true, "action" to "open_file", "uri" to uri.toString())
+    }
+
+    /** Bare, lower-case MIME type: `Text/Plain; charset=utf-8` → `text/plain`. */
+    private fun baseMime(raw: String): String = raw.substringBefore(';').trim().lowercase()
+
+    /** MIME inferred from the file extension when the caller sends none. */
+    private fun defaultMimeFor(fileName: String): String =
+        when (fileName.substringAfterLast('.', "").lowercase()) {
+            "txt", "md", "log", "csv" -> "text/plain"
+            "json" -> "application/json"
+            "pdf" -> "application/pdf"
+            "png" -> "image/png"
+            "jpg", "jpeg" -> "image/jpeg"
+            else -> "application/octet-stream"
+        }
+
+    private fun isAllowedSaveMime(mime: String): Boolean {
+        if (mime.isBlank()) return false
+        if (mime in SAVED_FILE_MIME_TYPES) return true
+        return SAVED_FILE_MIME_PREFIXES.any { mime.startsWith(it) }
+    }
+
+    /**
+     * Package archives and executables are never handed to a viewer: the package installer would
+     * run straight from an `ACTION_VIEW`. When MediaStore has no type for the download, the
+     * extension decides, so a typeless `foo.apk` is refused too.
+     */
+    private fun isBlockedOpenType(mime: String, fileName: String): Boolean {
+        val type = baseMime(mime)
+        if (type in BLOCKED_OPEN_MIME_TYPES) return true
+        if (type.startsWith("application/x-") && type.endsWith("-executable")) return true
+        val typeUnknown = type.isBlank() || type == "*/*" || type == "application/octet-stream"
+        return typeUnknown && fileName.substringAfterLast('.', "").lowercase() in BLOCKED_OPEN_EXTENSIONS
     }
 
     private fun findDownload(context: Context, name: String): Uri? {
