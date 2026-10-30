@@ -654,8 +654,13 @@ fun SessionRowItem(
             } else {
                 ""
             }
+            val job = when {
+                !session.isJob -> ""
+                session.running -> " · " + stringResource(R.string.job_running)
+                else -> " · " + stringResource(R.string.job_done)
+            }
             Text(
-                relativeTime(context, session.startedAt.toLong()) + " · " + messages + telegram,
+                relativeTime(context, session.startedAt.toLong()) + " · " + messages + telegram + job,
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(top = 2.dp),

@@ -60,7 +60,21 @@ data class SessionRow(
     val startedAt: Double,
     val messageCount: Int,
     val source: String,
-)
+    val endedAt: Double? = null,
+) {
+    /** A headless run (job), not a conversation the user started. */
+    val isJob: Boolean get() = source.lowercase() in JOB_SOURCES
+
+    /** A job session that has not finished yet. */
+    val running: Boolean get() = isJob && endedAt == null
+
+    companion object {
+        // Sessions started outside the phone: a CLI job run (`hermes chat -q --source cli`,
+        // which the gateway stores as "local"), a kanban worker, or a headless oneshot run.
+        // The phone's own chats are "mobile", the TUI's are "tui".
+        val JOB_SOURCES = setOf("local", "cli", "kanban", "oneshot", "tool")
+    }
+}
 
 data class ClarifyQuestion(
     val qid: String,
@@ -128,6 +142,8 @@ data class HermesUiState(
     val link: LinkState = LinkState.Idle,
     val account: String = "",
     val sessions: List<SessionRow> = emptyList(),
+    /** Long-running job sessions (oneshot/kanban), kept out of the conversation list. */
+    val jobs: List<SessionRow> = emptyList(),
     val currentRuntimeId: String? = null,
     val currentStoredId: String? = null,
     val title: String = "",
@@ -162,6 +178,7 @@ fun JsonObject.toSessionRow(): SessionRow = SessionRow(
     startedAt = double("started_at"),
     messageCount = int("message_count"),
     source = str("source"),
+    endedAt = strOrNull("ended_at")?.toDoubleOrNull(),
 )
 
 fun JsonObject.toClarifyQuestion(): ClarifyQuestion = ClarifyQuestion(

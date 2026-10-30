@@ -46,6 +46,9 @@
     <string name="no_sessions">Još nema prethodnih sesija.</string>
     <string name="sessions">Razgovori</string>
     <string name="conversations_upper">RAZGOVORI</string>
+    <string name="jobs_upper">ZADACI</string>
+    <string name="job_running">radi</string>
+    <string name="job_done">gotovo</string>
     <string name="start">Pokreni</string>
     <string name="set_up">Postavi</string>
     <string name="attachment">Prilog</string>

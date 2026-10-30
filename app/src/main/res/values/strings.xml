@@ -46,6 +46,9 @@
     <string name="no_sessions">No previous sessions yet.</string>
     <string name="sessions">Conversations</string>
     <string name="conversations_upper">CONVERSATIONS</string>
+    <string name="jobs_upper">JOBS</string>
+    <string name="job_running">running</string>
+    <string name="job_done">done</string>
     <string name="start">Start</string>
     <string name="set_up">Set up</string>
     <string name="attachment">Attachment</string>

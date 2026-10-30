@@ -868,16 +868,41 @@ private fun DrawerContent(
             }
         }
         HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f))
-        Text(
-            stringResource(R.string.conversations_upper),
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.padding(start = 18.dp, top = 12.dp, bottom = 4.dp),
-        )
         LazyColumn(
             modifier = Modifier.weight(1f),
             contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp),
         ) {
+            if (state.jobs.isNotEmpty()) {
+                item(key = "jobs-label") {
+                    Text(
+                        stringResource(R.string.jobs_upper),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(start = 10.dp, top = 8.dp, bottom = 4.dp),
+                    )
+                }
+                items(state.jobs, key = { "job-" + it.id }) { job ->
+                    SessionRowItem(
+                        session = job,
+                        current = job.id == state.currentStoredId,
+                        onClick = { onSelectSession(job.id) },
+                    )
+                }
+                item(key = "jobs-divider") {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.4f),
+                        modifier = Modifier.padding(vertical = 4.dp),
+                    )
+                }
+            }
+            item(key = "conversations-label") {
+                Text(
+                    stringResource(R.string.conversations_upper),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(start = 10.dp, top = 8.dp, bottom = 4.dp),
+                )
+            }
             items(state.sessions, key = { it.id }) { session ->
                 SessionRowItem(
                     session = session,

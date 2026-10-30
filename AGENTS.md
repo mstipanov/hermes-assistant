@@ -53,6 +53,23 @@ exact version name. Shipped sections are never edited or renumbered.
 - `device/` — Android action handlers (apps, media, alarms, calls, SMS, files, status)
 - `ui/` — Compose screens (chat, audio-only orb, settings, approvals, action permissions)
 
+## Long jobs (the "Zadaci" group)
+
+Long work runs in its own session so the phone conversation stays free. Start one with the CLI and
+the job becomes a pickable session in the app:
+
+```bash
+hermes chat -q "<task>" --oneshot --source cli --in ~/IdeaProjects/hermes-assistant
+```
+
+`--source cli` matters: the gateway stores it as `local`, which is listed. A plain `hermes -z` run is
+stored as `oneshot`, and `oneshot`/`kanban`/`tool` are on the gateway's internal deny-list
+(`INTERNAL_LISTING_SOURCES`) — those sessions never reach the app. The app groups `local`/`cli`/
+`kanban` sessions into "Zadaci" and shows `running` while `ended_at` is null.
+
+A job must not bump the version, touch a shipped changelog section, or publish — it leaves the tree
+changed and reports; the parent session reviews the diff and publishes.
+
 ## Device actions: two sides must match
 
 Every action exists twice — in `device/` here and in the Hermes server plugin

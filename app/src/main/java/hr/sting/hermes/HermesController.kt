@@ -440,14 +440,21 @@ class HermesController(private val app: Application) {
     private suspend fun loadSessions() {
         val client = rpc ?: return
         runCatching {
-            client.call("session.list", jsonObject("limit" to 60))
+            // include_hidden: job runs (oneshot/kanban) are on the gateway's internal deny-list,
+            // and the app shows them in their own "Zadaci" group instead of the chat list.
+            client.call("session.list", jsonObject("limit" to 60, "include_hidden" to true))
                 .objects("sessions")
                 .map { it.toSessionRow() }
                 // The app no longer shares conversations with the Telegram bot: its
                 // sessions live in a separate world and are not offered here.
                 .filter { !it.source.equals("telegram", ignoreCase = true) }
         }.onSuccess { rows ->
-            _ui.update { it.copy(sessions = rows) }
+            _ui.update {
+                it.copy(
+                    sessions = rows.filter { row -> !row.isJob },
+                    jobs = rows.filter { row -> row.isJob },
+                )
+            }
         }
     }
 

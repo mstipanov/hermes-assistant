@@ -3,6 +3,10 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta10
+- **"Zadaci" in the session switcher.** Sessions started outside the phone — a long CLI job run, a kanban worker, a headless run — now appear in their own group above the conversations, with a running/done status, and open like any other chat. Long work can run there while the phone conversation stays free.
+- **Attachment thumbnails are decoded off the main thread** (downsampled to the 42 dp slot), so adding a photo no longer blocks the UI or materialises a full-resolution bitmap.
+
 ## 0.55-beta9
 - **Stop works at once.** The stop button clears the turn in the UI immediately (no more "still answering" spinner that never ends) and sends the interrupt with a short timeout instead of waiting on a 35 s Ready handshake.
 - **Screen capture works on Android 14+.** The media projection now registers its required callback; without it every capture failed with "Must register a callback before starting capture".
