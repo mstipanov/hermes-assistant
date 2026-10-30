@@ -3,6 +3,9 @@
 Beta builds ship features before they reach the stable release. The app keeps the same package and
 is signed with the same key, so installing a beta replaces the stable build on your phone.
 
+## 0.55-beta13
+- **Messages typed while Hermes is answering are queued, not dropped.** Keep typing while a turn runs: a row above the composer shows what is waiting (with an X to drop it) and the message is sent as soon as the turn ends. The queue belongs to the conversation it was typed in — switching sessions drops it rather than posting it elsewhere.
+
 ## 0.55-beta12
 - **Files need confirmation.** `save_file` and `open_file` now ask before they run, refuse payloads over 8 MB, only accept a non-executable MIME allowlist (images, text, PDF, audio, video, archives, office documents) and never hand an APK or another executable to a viewer.
 - **The audio-only screen no longer recomposes every frame.** The orb's pulse is read in the draw phase and only runs while listening or speaking, so an idle screen schedules no frames at all (it used to re-sanitise the last reply and rebuild two gradients 60 times a second).
